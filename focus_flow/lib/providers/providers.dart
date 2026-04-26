@@ -1,7 +1,3 @@
-export 'task_provider.dart' show tasksProvider, TasksNotifier;
-export 'flow_provider.dart' show flowSessionProvider, FlowSessionNotifier;
-export 'stats_provider.dart' show todayStatsProvider, getTodayStatsProvider;
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/repositories/task_repository.dart';
 import '../data/repositories/session_repository.dart';
@@ -10,6 +6,11 @@ import '../data/repositories/template_repository.dart';
 import '../data/repositories/resource_repository.dart';
 import '../data/repositories/settings_repository.dart';
 import '../data/repositories/note_repository.dart';
+
+export 'task_provider.dart' show tasksProvider, TasksNotifier;
+export 'flow_provider.dart' show flowSessionProvider, FlowSessionNotifier;
+export 'stats_provider.dart' show todayStatsProvider, getTodayStatsProvider;
+export 'settings_provider.dart' show appSettingsProvider, AppSettingsNotifier, darkModeProvider, soundEnabledProvider, pomodoroSettingsProvider, notificationSettingsProvider, displaySettingsProvider, appThemeModeProvider;
 
 // Repository providers (initialized async)
 final taskRepositoryProvider = FutureProvider<TaskRepository>((ref) async {

@@ -137,4 +137,33 @@ class AppColors {
   static const Color tealBorder = Color(0xFF99F6E4);
   static const Color teal100 = Color(0xFFCCFBF1);
   static const Color teal700 = Color(0xFF0F766E);
+
+  // ─────────────────────────────────────────────────────────────────
+  // SETTINGS UI COLORS
+  // ─────────────────────────────────────────────────────────────────
+
+  /// Settings tile background — white in light, charcoal in dark
+  static Color settingsTileBg(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.dark
+        ? charcoal
+        : white;
+  }
+
+  /// Settings section label color
+  static const Color settingsSectionLabel = teal;
+
+  /// Settings tile border in light mode
+  static const Color settingsTileBorder = grey200;
+
+  /// Divider color for settings lists
+  static const Color settingsDivider = grey200;
+
+  /// Disabled / inactive text in settings
+  static const Color settingsDisabledText = grey400;
+
+  /// Settings icon background (tinted circle)
+  static const Color settingsIconBg = grey100;
+
+  /// Settings destructive action color
+  static const Color destructive = error;
 }

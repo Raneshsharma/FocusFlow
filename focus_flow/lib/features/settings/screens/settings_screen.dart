@@ -5,15 +5,21 @@ import 'package:share_plus/share_plus.dart';
 import 'package:file_picker/file_picker.dart';
 import 'dart:io';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_icon.dart';
-import '../../../providers/providers.dart';
-import '../../../data/models/task.dart';
-import '../../../data/models/flow_session.dart';
-import '../../../data/models/template.dart';
-import '../../../data/models/resource.dart';
-import '../../../data/models/daily_stats.dart';
+import '../../../providers/settings_provider.dart';
 import '../../../data/models/app_settings.dart';
 import '../../onboarding/providers/onboarding_provider.dart';
+import '../widgets/settings_header.dart';
+import '../widgets/settings_card.dart';
+import '../widgets/settings_section.dart';
+import '../widgets/settings_toggle_tile.dart';
+import '../widgets/settings_slider_tile.dart';
+import '../widgets/settings_action_tile.dart';
+import '../widgets/settings_stat_card.dart';
+import '../widgets/theme_preview_card.dart';
+import '../widgets/pomodoro_settings_sheet.dart';
+import '../../../providers/providers.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -28,8 +34,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _isExporting = false;
   bool _isImporting = false;
   bool _isLoading = true;
+  double _fontScale = 1.0;
 
-  // Stats
   int _totalTasks = 0;
   int _totalSessions = 0;
   int _totalFocusMinutes = 0;
@@ -44,12 +50,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Future<void> _loadSettings() async {
     try {
-      final settingsRepo = await ref.read(settingsRepositoryProvider.future);
-      final settings = settingsRepo.getSettings();
+      final settings = ref.read(appSettingsProvider).valueOrNull;
       if (mounted && settings != null) {
         setState(() {
           _isDarkMode = settings.isDarkMode;
           _soundEnabled = settings.soundEnabled;
+          _fontScale = settings.display.fontScale;
         });
       }
     } finally {
@@ -57,14 +63,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         setState(() => _isLoading = false);
       }
     }
-  }
-
-  Future<void> _saveSettings() async {
-    final settingsRepo = await ref.read(settingsRepositoryProvider.future);
-    final settings = settingsRepo.getSettings() ?? AppSettings();
-    settings.isDarkMode = _isDarkMode;
-    settings.soundEnabled = _soundEnabled;
-    await settingsRepo.saveSettings(settings);
   }
 
   Future<void> _loadStats() async {
@@ -77,7 +75,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       final sessions = sessionRepo.getAll();
       final allStats = statsRepo.getAll();
 
-      // Calculate totals
       final completedTasks = tasks.where((t) => t.completed).length;
       final focusMinutes = sessions.fold<int>(0, (sum, s) => sum + (s.durationSeconds ~/ 60));
       final streak = allStats.isNotEmpty
@@ -99,229 +96,380 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+    final settingsAsync = ref.watch(appSettingsProvider);
+    final isDarkMode = ref.watch(darkModeProvider);
+    final soundEnabled = ref.watch(soundEnabledProvider);
+    final displaySettings = ref.watch(displaySettingsProvider);
+    final notificationSettings = ref.watch(notificationSettingsProvider);
+
+    if (_isLoading || settingsAsync.isLoading) {
+      return Scaffold(
+        backgroundColor: AppTheme.dynamicScaffoldBg(context),
+        body: const Center(child: CircularProgressIndicator()),
       );
     }
 
     return Scaffold(
+      backgroundColor: AppTheme.dynamicScaffoldBg(context),
       appBar: AppBar(
         title: const Text('Settings'),
+        backgroundColor: AppTheme.dynamicScaffoldBg(context),
+        foregroundColor: AppTheme.dynamicTextOnSurface(context),
       ),
-      body: ListView(
-        children: [
-          // Stats section
-          _buildSectionHeader('YOUR STATS'),
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.grey200),
-            ),
-            child: Column(
-              children: [
-                _buildStatRow('🔥', 'Current Streak', '$_currentStreak days'),
-                const Divider(height: 24),
-                _buildStatRow('✅', 'Tasks Completed', '$_totalTasks tasks'),
-                const Divider(height: 24),
-                _buildStatRow('🎯', 'Sessions', '$_totalSessions sessions'),
-                const Divider(height: 24),
-                _buildStatRow('⏱️', 'Focus Time', '${(_totalFocusMinutes / 60).toStringAsFixed(1)} hours'),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              const SettingsHeader(),
+
+              // STATS SECTION
+              SettingsSection(label: 'Your Stats'),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: SettingsStatCard(
+                        iconEmoji: '🔥',
+                        value: '$_currentStreak',
+                        label: 'Day Streak',
+                        iconColor: AppColors.amber,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: SettingsStatCard(
+                        iconEmoji: '✅',
+                        value: '$_totalTasks',
+                        label: 'Tasks Done',
+                        iconColor: AppColors.success,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: SettingsStatCard(
+                        iconEmoji: '🎯',
+                        value: '$_totalSessions',
+                        label: 'Sessions',
+                        iconColor: AppColors.teal,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: SettingsStatCard(
+                        iconEmoji: '⏱️',
+                        value: '${(_totalFocusMinutes / 60).toStringAsFixed(1)}h',
+                        label: 'Focus Time',
+                        iconColor: AppColors.energyDeep,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // TIMER SETTINGS SECTION
+              SettingsSection(label: 'Timer'),
+              SettingsCard(
+                child: SettingsActionTile(
+                  iconEmoji: '🍅',
+                  iconColor: const Color(0xFFEF4444),
+                  title: 'Pomodoro Settings',
+                  subtitle: 'Work: ${displaySettings.pomodoro.workMinutes}min · '
+                      'Break: ${displaySettings.pomodoro.shortBreakMinutes}min · '
+                      'Long: ${displaySettings.pomodoro.longBreakMinutes}min',
+                  onTap: () => _showPomodoroSettings(context),
+                ),
+              ),
+              SettingsCard(
+                child: SettingsToggleTile(
+                  iconEmoji: '🔊',
+                  iconColor: AppColors.teal,
+                  title: 'Sound Effects',
+                  subtitle: 'Play sounds for timers',
+                  value: soundEnabled,
+                  onChanged: (v) => ref.read(appSettingsProvider.notifier).setSoundEnabled(v),
+                ),
+              ),
+
+              // APPEARANCE SECTION
+              SettingsSection(label: 'Appearance'),
+              SettingsCard(
+                child: Column(
+                  children: [
+                    SettingsToggleTile(
+                      iconEmoji: '🌙',
+                      iconColor: Colors.purple,
+                      title: 'Dark Mode',
+                      subtitle: 'Use dark theme',
+                      value: isDarkMode,
+                      onChanged: (v) => ref.read(appSettingsProvider.notifier).setDarkMode(v),
+                    ),
+                    const SizedBox(height: 16),
+                    ThemePreviewCard(isDarkMode: isDarkMode, fontScale: _fontScale),
+                  ],
+                ),
+              ),
+              SettingsCard(
+                child: SettingsSliderTile(
+                  iconEmoji: '🔤',
+                  iconColor: AppColors.amber,
+                  title: 'Font Size',
+                  subtitle: 'Adjust text scale',
+                  value: _fontScale,
+                  min: 0.8,
+                  max: 1.4,
+                  divisions: 6,
+                  labelBuilder: (v) => '${(v * 100).toInt()}%',
+                  onChanged: (v) {
+                    setState(() => _fontScale = v);
+                    final current = ref.read(displaySettingsProvider);
+                    ref.read(appSettingsProvider.notifier).updateDisplay(
+                      DisplaySettings(
+                        fontFamily: current.fontFamily,
+                        fontScale: v,
+                        reduceMotion: current.reduceMotion,
+                        hapticFeedback: current.hapticFeedback,
+                      ),
+                    );
+                  },
+                ),
+              ),
+
+              // NOTIFICATIONS SECTION
+              SettingsSection(label: 'Notifications'),
+              SettingsCard(
+                child: SettingsToggleTile(
+                  iconEmoji: '🔔',
+                  iconColor: AppColors.amber,
+                  title: 'Push Notifications',
+                  subtitle: 'Enable all notifications',
+                  value: notificationSettings.enabled,
+                  onChanged: (v) {
+                    ref.read(appSettingsProvider.notifier).updateNotifications(
+                      NotificationSettings(
+                        enabled: v,
+                        sessionEndNotify: v,
+                        breakEndNotify: v,
+                        dailyReminderNotify: notificationSettings.dailyReminderNotify,
+                        dailyReminderTime: notificationSettings.dailyReminderTime,
+                      ),
+                    );
+                  },
+                ),
+              ),
+              if (notificationSettings.enabled) ...[
+                SettingsCard(
+                  child: Column(
+                    children: [
+                      SettingsToggleTile(
+                        iconEmoji: '✅',
+                        iconColor: AppColors.success,
+                        title: 'Session End',
+                        subtitle: 'Notify when focus session ends',
+                        value: notificationSettings.sessionEndNotify,
+                        onChanged: (v) {
+                          ref.read(appSettingsProvider.notifier).updateNotifications(
+                            NotificationSettings(
+                              enabled: notificationSettings.enabled,
+                              sessionEndNotify: v,
+                              breakEndNotify: notificationSettings.breakEndNotify,
+                              dailyReminderNotify: notificationSettings.dailyReminderNotify,
+                              dailyReminderTime: notificationSettings.dailyReminderTime,
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      SettingsToggleTile(
+                        iconEmoji: '☕',
+                        iconColor: Colors.brown,
+                        title: 'Break End',
+                        subtitle: 'Notify when break is over',
+                        value: notificationSettings.breakEndNotify,
+                        onChanged: (v) {
+                          ref.read(appSettingsProvider.notifier).updateNotifications(
+                            NotificationSettings(
+                              enabled: notificationSettings.enabled,
+                              sessionEndNotify: notificationSettings.sessionEndNotify,
+                              breakEndNotify: v,
+                              dailyReminderNotify: notificationSettings.dailyReminderNotify,
+                              dailyReminderTime: notificationSettings.dailyReminderTime,
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      SettingsToggleTile(
+                        iconEmoji: '📅',
+                        iconColor: AppColors.teal,
+                        title: 'Daily Reminder',
+                        subtitle: 'Remind to start your day',
+                        value: notificationSettings.dailyReminderNotify,
+                        onChanged: (v) {
+                          ref.read(appSettingsProvider.notifier).updateNotifications(
+                            NotificationSettings(
+                              enabled: notificationSettings.enabled,
+                              sessionEndNotify: notificationSettings.sessionEndNotify,
+                              breakEndNotify: notificationSettings.breakEndNotify,
+                              dailyReminderNotify: v,
+                              dailyReminderTime: v ? (notificationSettings.dailyReminderTime ?? '09:00') : null,
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
               ],
-            ),
-          ),
 
-          // Data section
-          _buildSectionHeader('Data'),
-          ListTile(
-            leading: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.blue.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
+              // DATA SECTION
+              SettingsSection(label: 'Data'),
+              SettingsCard(
+                child: Column(
+                  children: [
+                    SettingsActionTile(
+                      iconEmoji: '📤',
+                      iconColor: Colors.blue,
+                      title: 'Export Data',
+                      subtitle: 'Download all data as JSON',
+                      onTap: _isExporting ? () {} : _exportData,
+                      trailing: _isExporting
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : null,
+                    ),
+                    SettingsActionTile(
+                      iconEmoji: '📥',
+                      iconColor: Colors.green,
+                      title: 'Import Data',
+                      subtitle: 'Restore from backup file',
+                      onTap: _isImporting ? () {} : _importData,
+                      trailing: _isImporting
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : null,
+                    ),
+                    SettingsActionTile(
+                      iconEmoji: '🗑️',
+                      iconColor: Colors.red,
+                      title: 'Clear All Data',
+                      subtitle: 'Permanently delete everything',
+                      onTap: _showClearConfirmation,
+                      textColor: Colors.red,
+                      showDivider: false,
+                    ),
+                  ],
+                ),
               ),
-              child: AppIcon(AppIcons.download, color: Colors.blue),
-            ),
-            title: const Text('Export Data'),
-            subtitle: const Text('Download all your data as JSON'),
-            trailing: _isExporting
-                ? const SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : AppIcon(AppIcons.chevronRight),
-            onTap: _isExporting ? null : _exportData,
-          ),
-          ListTile(
-            leading: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
+
+              // DEVELOPER SECTION
+              SettingsSection(label: 'Developer'),
+              SettingsCard(
+                child: SettingsActionTile(
+                  iconEmoji: '🔄',
+                  iconColor: Colors.purple,
+                  title: 'Reset Onboarding',
+                  subtitle: 'Show onboarding screens again',
+                  onTap: _showResetOnboardingConfirmation,
+                  showDivider: false,
+                ),
               ),
-              child: AppIcon(AppIcons.upload, color: Colors.green),
-            ),
-            title: const Text('Import Data'),
-            subtitle: const Text('Restore from a backup file'),
-            trailing: _isImporting
-                ? const SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : AppIcon(AppIcons.chevronRight),
-            onTap: _isImporting ? null : _importData,
-          ),
-          ListTile(
-            leading: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
+
+              // ABOUT SECTION
+              SettingsSection(label: 'About'),
+              SettingsCard(
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: AppColors.teal.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Center(
+                            child: AppIcon(
+                              AppIcons.checkCircle,
+                              color: AppColors.teal,
+                              size: 24,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'FocusFlow',
+                                style: TextStyle(
+                                  fontFamily: 'Montserrat',
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppTheme.dynamicTextOnSurface(context),
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Version 1.0.0',
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 13,
+                                  color: Colors.grey.shade600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    SettingsActionTile(
+                      iconEmoji: '❤️',
+                      iconColor: Colors.pink,
+                      title: 'Privacy',
+                      subtitle: 'All data stored locally on your device',
+                      onTap: () {},
+                      showDivider: false,
+                    ),
+                  ],
+                ),
               ),
-              child: AppIcon(AppIcons.deleteForever, color: Colors.red),
-            ),
-            title: const Text(
-              'Clear All Data',
-              style: TextStyle(color: Colors.red),
-            ),
-            subtitle: const Text('This cannot be undone'),
-            onTap: _showClearConfirmation,
-          ),
 
-          const Divider(),
-
-          // Preferences section
-          _buildSectionHeader('Preferences'),
-          SwitchListTile(
-            secondary: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.purple.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: AppIcon(AppIcons.darkMode, color: Colors.purple),
-            ),
-            title: const Text('Dark Mode'),
-            subtitle: const Text('Use dark theme'),
-            value: _isDarkMode,
-            onChanged: (value) async {
-              setState(() => _isDarkMode = value);
-              await _saveSettings();
-            },
+              const SizedBox(height: 32),
+            ],
           ),
-          SwitchListTile(
-            secondary: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.orange.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: AppIcon(AppIcons.volumeUp, color: Colors.orange),
-            ),
-            title: const Text('Sound Effects'),
-            subtitle: const Text('Play sounds for timers'),
-            value: _soundEnabled,
-            onChanged: (value) async {
-              setState(() => _soundEnabled = value);
-              await _saveSettings();
-            },
-          ),
-
-          const Divider(),
-
-          // Developer section
-          _buildSectionHeader('Developer'),
-          ListTile(
-            leading: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.purple.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: AppIcon(AppIcons.refresh, color: Colors.purple),
-            ),
-            title: const Text('Reset Onboarding'),
-            subtitle: const Text('Show onboarding screens again'),
-            onTap: _showResetOnboardingConfirmation,
-          ),
-
-          const Divider(),
-
-          // About section
-          _buildSectionHeader('About'),
-          const ListTile(
-            leading: CircleAvatar(
-              backgroundColor: AppColors.teal,
-              child: AppIcon(AppIcons.check, color: Colors.white),
-            ),
-            title: Text('FocusFlow'),
-            subtitle: Text('Version 1.0.0'),
-          ),
-          const ListTile(
-            leading: AppIcon(AppIcons.heartAlt, color: Colors.pink),
-            title: Text('Made for ADHD brains'),
-            subtitle: Text('Designed to help you thrive'),
-          ),
-          const ListTile(
-            leading: AppIcon(AppIcons.lock, color: Colors.grey),
-            title: Text('Privacy'),
-            subtitle: Text('All data stored locally on your device'),
-          ),
-          const SizedBox(height: 32),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildStatRow(String icon, String label, String value) {
-    return Row(
-      children: [
-        Text(icon, style: const TextStyle(fontSize: 18)),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 14,
-              color: AppColors.textSecondary,
-            ),
-          ),
-        ),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: AppColors.textPrimary,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSectionHeader(String title) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-      child: Text(
-        title.toUpperCase(),
-        style: TextStyle(
-          color: AppColors.teal,
-          fontWeight: FontWeight.w600,
-          fontSize: 12,
-          letterSpacing: 1.2,
-        ),
-      ),
+  void _showPomodoroSettings(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => const PomodoroSettingsSheet(),
     );
   }
 
   Future<void> _exportData() async {
     setState(() => _isExporting = true);
-
     try {
       final taskRepo = await ref.read(taskRepositoryProvider.future);
       final sessionRepo = await ref.read(sessionRepositoryProvider.future);
@@ -346,11 +494,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       };
 
       final jsonString = const JsonEncoder.withIndent('  ').convert(exportData);
-
-      await Share.share(
-        jsonString,
-        subject: 'FocusFlow Export ${DateTime.now().toIso8601String().split('T')[0]}',
-      );
+      await Share.share(jsonString, subject: 'FocusFlow Export ${DateTime.now().toIso8601String().split('T')[0]}');
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -363,28 +507,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Export failed: $e'),
-            backgroundColor: AppColors.error,
-          ),
+          SnackBar(content: Text('Export failed: $e'), backgroundColor: AppColors.error),
         );
       }
     } finally {
-      if (mounted) {
-        setState(() => _isExporting = false);
-      }
+      if (mounted) setState(() => _isExporting = false);
     }
   }
 
   Future<void> _importData() async {
     setState(() => _isImporting = true);
-
     try {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['json'],
       );
-
       if (result == null || result.files.single.path == null) {
         setState(() => _isImporting = false);
         return;
@@ -394,9 +531,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       final contents = await file.readAsString();
       final data = jsonDecode(contents) as Map<String, dynamic>;
 
-      if (!data.containsKey('version')) {
-        throw Exception('Invalid backup file');
-      }
+      if (!data.containsKey('version')) throw Exception('Invalid backup file');
 
       final taskCount = (data['tasks'] as List?)?.length ?? 0;
       final sessionCount = (data['sessions'] as List?)?.length ?? 0;
@@ -408,16 +543,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           title: const Text('Import Data'),
           content: Text(
             'This will replace all existing data with:\n'
-            '- $taskCount tasks\n'
-            '- $sessionCount sessions\n'
-            '- $templateCount templates\n\n'
-            'Continue?',
+            '- $taskCount tasks\n- $sessionCount sessions\n- $templateCount templates\n\nContinue?',
           ),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel'),
-            ),
+            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
             ElevatedButton(
               onPressed: () => Navigator.pop(context, true),
               style: ElevatedButton.styleFrom(backgroundColor: AppColors.teal),
@@ -438,14 +567,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       final resourceRepo = await ref.read(resourceRepositoryProvider.future);
       final statsRepo = await ref.read(statsRepositoryProvider.future);
 
-      // Clear existing data
       await taskRepo.deleteAll();
       await sessionRepo.deleteAll();
       await templateRepo.deleteAll();
       await resourceRepo.deleteAll();
       await statsRepo.deleteAll();
 
-      // Import tasks
       final tasksList = data['tasks'] as List?;
       if (tasksList != null) {
         for (final taskJson in tasksList) {
@@ -454,7 +581,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         }
       }
 
-      // Import sessions
       final sessionsList = data['sessions'] as List?;
       if (sessionsList != null) {
         for (final sessionJson in sessionsList) {
@@ -463,7 +589,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         }
       }
 
-      // Import templates
       final templatesList = data['templates'] as List?;
       if (templatesList != null) {
         for (final templateJson in templatesList) {
@@ -472,7 +597,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         }
       }
 
-      // Import resources
       final resourcesList = data['resources'] as List?;
       if (resourcesList != null) {
         for (final resourceJson in resourcesList) {
@@ -481,7 +605,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         }
       }
 
-      // Import stats
       final statsList = data['stats'] as List?;
       if (statsList != null) {
         for (final statJson in statsList) {
@@ -490,7 +613,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         }
       }
 
-      // Refresh stats display
       await _loadStats();
 
       if (mounted) {
@@ -504,16 +626,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Import failed: $e'),
-            backgroundColor: AppColors.error,
-          ),
+          SnackBar(content: Text('Import failed: $e'), backgroundColor: AppColors.error),
         );
       }
     } finally {
-      if (mounted) {
-        setState(() => _isImporting = false);
-      }
+      if (mounted) setState(() => _isImporting = false);
     }
   }
 
@@ -523,62 +640,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       builder: (context) => AlertDialog(
         title: const Text('Clear All Data?'),
         content: const Text(
-          'This will permanently delete all your:\n'
-          '- Tasks\n'
-          '- Sessions\n'
-          '- Templates\n'
-          '- Resources\n'
-          '- Stats\n\n'
-          'This action cannot be undone.',
+          'This will permanently delete all:\n'
+          '- Tasks\n- Sessions\n- Templates\n'
+          '- Resources\n- Stats\n\nThis cannot be undone.',
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
           TextButton(
             onPressed: () async {
               Navigator.pop(context);
               await _clearAllData();
             },
-            child: const Text(
-              'Delete Everything',
-              style: TextStyle(color: Colors.red),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showResetOnboardingConfirmation() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Reset Onboarding?'),
-        content: const Text(
-          'This will show the onboarding screens again when you restart the app.\n\n'
-          'Your tasks and data will not be affected.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              await ref.read(onboardingProvider.notifier).resetOnboarding();
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Onboarding will show again on next launch'),
-                    backgroundColor: AppColors.teal,
-                  ),
-                );
-              }
-            },
-            child: const Text('Reset'),
+            child: const Text('Delete Everything', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -599,26 +672,45 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       await resourceRepo.deleteAll();
       await statsRepo.deleteAll();
 
-      // Refresh stats display
+      await ref.read(appSettingsProvider.notifier).clearAllData();
       await _loadStats();
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('All data cleared'),
-            backgroundColor: AppColors.success,
-          ),
+          const SnackBar(content: Text('All data cleared'), backgroundColor: AppColors.success),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to clear data: $e'),
-            backgroundColor: AppColors.error,
-          ),
+          SnackBar(content: Text('Failed to clear data: $e'), backgroundColor: AppColors.error),
         );
       }
     }
+  }
+
+  void _showResetOnboardingConfirmation() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Reset Onboarding?'),
+        content: const Text('This will show the onboarding screens again on next launch.\n\nYour tasks and data will not be affected.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await ref.read(onboardingProvider.notifier).resetOnboarding();
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Onboarding will show again on next launch'), backgroundColor: AppColors.teal),
+                );
+              }
+            },
+            child: const Text('Reset'),
+          ),
+        ],
+      ),
+    );
   }
 }

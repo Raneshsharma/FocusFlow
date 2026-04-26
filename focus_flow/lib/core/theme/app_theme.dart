@@ -39,6 +39,7 @@ class AppTheme {
         onSurface: AppColors.textPrimary,
       ),
       scaffoldBackgroundColor: AppColors.surface,
+      dialogBackgroundColor: AppColors.white,
 
       // AppBar — left-aligned (not centered)
       appBarTheme: const AppBarTheme(
@@ -310,6 +311,7 @@ class AppTheme {
         surface: AppColors.deepSlate,
       ),
       scaffoldBackgroundColor: AppColors.deepSlate,
+      dialogBackgroundColor: AppColors.charcoal,
       appBarTheme: const AppBarTheme(
         backgroundColor: AppColors.deepSlate,
         foregroundColor: Colors.white,
@@ -380,5 +382,45 @@ class AppTheme {
       fontWeight: FontWeight.w400,
       color: color ?? AppColors.textPrimary,
     );
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  // DYNAMIC / CONTEXT-AWARE HELPERS
+  // ─────────────────────────────────────────────────────────────────
+
+  /// Returns the appropriate color for a surface/card based on brightness.
+  /// Uses white in light, charcoal in dark.
+  static Color dynamicSurface(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.dark
+        ? AppColors.charcoal
+        : AppColors.white;
+  }
+
+  /// Returns the scaffold background color based on brightness.
+  static Color dynamicScaffoldBg(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.dark
+        ? AppColors.deepSlate
+        : AppColors.surface;
+  }
+
+  /// Returns textPrimary or white (for dark surfaces).
+  static Color dynamicTextOnSurface(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.dark
+        ? Colors.white
+        : AppColors.textPrimary;
+  }
+
+  /// Returns the border color for settings cards/tiles.
+  static Color dynamicBorder(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.dark
+        ? AppColors.grey800
+        : AppColors.grey200;
+  }
+
+  /// Returns the elevated card color for dark mode (charcoal instead of white).
+  static Color dynamicCardBg(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.dark
+        ? AppColors.charcoal
+        : AppColors.white;
   }
 }
