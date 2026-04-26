@@ -16,83 +16,90 @@ class FocusScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final tasks = ref.watch(tasksProvider);
-    final incomplete = tasks.where((t) => !t.completed).toList();
-    final anytime = incomplete.where((t) => t.zone == TimeZone.anytime).toList();
+    final tasksAsync = ref.watch(tasksProvider);
 
-    final hour = DateTime.now().hour;
-    final currentZone = _getCurrentZone(hour);
+    return tasksAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(child: Text('Error: $e')),
+      data: (tasks) {
+        final incomplete = tasks.where((t) => !t.completed).toList();
+        final anytime = incomplete.where((t) => t.zone == TimeZone.anytime).toList();
 
-    return Scaffold(
-      backgroundColor: AppColors.surface,
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(context, ref),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Column(
-                  children: [
-                    TimeZoneCard(
-                      icon: '🌅',
-                      title: 'Morning',
-                      timeRange: '5 AM – 11:59 AM',
-                      color: AppColors.zoneMorning,
-                      isCurrentZone: currentZone == TimeZone.morning,
-                      tasks: incomplete.where((t) => t.zone == TimeZone.morning).toList(),
-                      onAddTask: () => _showAddTaskDialog(context, TimeZone.morning),
+        final hour = DateTime.now().hour;
+        final currentZone = _getCurrentZone(hour);
+
+        return Scaffold(
+          backgroundColor: AppColors.surface,
+          body: SafeArea(
+            child: Column(
+              children: [
+                _buildHeader(context, ref),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: Column(
+                      children: [
+                        TimeZoneCard(
+                          icon: '🌅',
+                          title: 'Morning',
+                          timeRange: '5 AM – 11:59 AM',
+                          color: AppColors.zoneMorning,
+                          isCurrentZone: currentZone == TimeZone.morning,
+                          tasks: incomplete.where((t) => t.zone == TimeZone.morning).toList(),
+                          onAddTask: () => _showAddTaskDialog(context, TimeZone.morning),
+                        ),
+                        const SizedBox(height: 12),
+                        TimeZoneCard(
+                          icon: '☀️',
+                          title: 'Afternoon',
+                          timeRange: '12 PM – 5:59 PM',
+                          color: AppColors.zoneAfternoon,
+                          isCurrentZone: currentZone == TimeZone.afternoon,
+                          tasks: incomplete.where((t) => t.zone == TimeZone.afternoon).toList(),
+                          onAddTask: () => _showAddTaskDialog(context, TimeZone.afternoon),
+                        ),
+                        const SizedBox(height: 12),
+                        TimeZoneCard(
+                          icon: '🌙',
+                          title: 'Evening',
+                          timeRange: '6 PM – 12 AM',
+                          color: AppColors.zoneEvening,
+                          isCurrentZone: currentZone == TimeZone.evening,
+                          tasks: incomplete.where((t) => t.zone == TimeZone.evening).toList(),
+                          onAddTask: () => _showAddTaskDialog(context, TimeZone.evening),
+                        ),
+                        const SizedBox(height: 20),
+                        AnytimePool(
+                          tasks: anytime,
+                          onAddTask: () => _showAddTaskDialog(context, TimeZone.anytime),
+                        ),
+                        const SizedBox(height: 80),
+                      ],
                     ),
-                    const SizedBox(height: 12),
-                    TimeZoneCard(
-                      icon: '☀️',
-                      title: 'Afternoon',
-                      timeRange: '12 PM – 5:59 PM',
-                      color: AppColors.zoneAfternoon,
-                      isCurrentZone: currentZone == TimeZone.afternoon,
-                      tasks: incomplete.where((t) => t.zone == TimeZone.afternoon).toList(),
-                      onAddTask: () => _showAddTaskDialog(context, TimeZone.afternoon),
-                    ),
-                    const SizedBox(height: 12),
-                    TimeZoneCard(
-                      icon: '🌙',
-                      title: 'Evening',
-                      timeRange: '6 PM – 12 AM',
-                      color: AppColors.zoneEvening,
-                      isCurrentZone: currentZone == TimeZone.evening,
-                      tasks: incomplete.where((t) => t.zone == TimeZone.evening).toList(),
-                      onAddTask: () => _showAddTaskDialog(context, TimeZone.evening),
-                    ),
-                    const SizedBox(height: 20),
-                    AnytimePool(
-                      tasks: anytime,
-                      onAddTask: () => _showAddTaskDialog(context, TimeZone.anytime),
-                    ),
-                    const SizedBox(height: 80),
-                  ],
+                  ),
                 ),
+              ],
+            ),
+          ),
+          floatingActionButton: SizedBox(
+            width: 52,
+            height: 52,
+            child: FloatingActionButton(
+              onPressed: () => _showAddTaskDialog(context, null),
+              backgroundColor: AppColors.amber,
+              elevation: 4,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: AppIcon(
+                AppIcons.add,
+                color: AppColors.deepSlate,
+                size: 24,
               ),
             ),
-          ],
-        ),
-      ),
-      floatingActionButton: SizedBox(
-        width: 52,
-        height: 52,
-        child: FloatingActionButton(
-          onPressed: () => _showAddTaskDialog(context, null),
-          backgroundColor: AppColors.amber,
-          elevation: 4,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
           ),
-          child: AppIcon(
-              AppIcons.add,
-              color: AppColors.deepSlate,
-              size: 24,
-            ),
-        ),
-      ),
+        );
+      },
     );
   }
 

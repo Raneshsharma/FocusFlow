@@ -12,7 +12,7 @@ class BreathingTimerSheet extends ConsumerStatefulWidget {
 }
 
 class _BreathingTimerSheetState extends ConsumerState<BreathingTimerSheet>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   BreathingPattern _selectedPattern = BreathingPattern.box;
   int _selectedMinutes = 2;
   bool _isRunning = false;
@@ -145,24 +145,47 @@ class _BreathingTimerSheetState extends ConsumerState<BreathingTimerSheet>
           AnimatedBuilder(
             animation: _breathAnimation,
             builder: (context, child) {
-              return Container(
-                width: 200 * _breathAnimation.value,
-                height: 200 * _breathAnimation.value,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppColors.teal.withOpacity(0.3),
-                  border: Border.all(
-                    color: AppColors.teal,
-                    width: 4,
-                  ),
-                ),
-                child: Center(
-                  child: Text(
-                    _currentPhase,
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
+              double scale = _breathAnimation.value;
+              // Adjust scale based on phase
+              if (_currentPhase.contains('Out')) {
+                scale = 1.6 - (0.6 * _breathAnimation.value);
+              } else if (_currentPhase == 'Hold') {
+                scale = 1.0;
+              } else if (_currentPhase.contains('In')) {
+                scale = 0.6 + (0.4 * _breathAnimation.value);
+              }
+              return Transform.scale(
+                scale: scale,
+                child: Container(
+                  width: 200,
+                  height: 200,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppColors.teal.withOpacity(0.3),
+                    border: Border.all(
                       color: AppColors.teal,
+                      width: 4,
+                    ),
+                  ),
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          _currentPhase,
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.teal,
+                          ),
+                        ),
+                        if (_selectedPattern == BreathingPattern.physiologicalSigh &&
+                            (_currentPhase == 'Inhale 1' || _currentPhase == 'Inhale 2'))
+                          const Text(
+                            '(double inhale)',
+                            style: TextStyle(fontSize: 12, color: AppColors.teal),
+                          ),
+                      ],
                     ),
                   ),
                 ),
@@ -172,19 +195,13 @@ class _BreathingTimerSheetState extends ConsumerState<BreathingTimerSheet>
           const SizedBox(height: 16),
 
           // Timer
-          Builder(
-            builder: (context) {
-              final remainingMinutes = (_selectedMinutes - (_elapsedSeconds ~/ 60)).clamp(0, 999);
-              final remainingSeconds = ((_selectedMinutes * 60 - _elapsedSeconds) % 60).abs();
-              return Text(
-                '$remainingMinutes:${remainingSeconds.toString().padLeft(2, '0')}',
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontFamily: 'Inter',
-                  fontWeight: FontWeight.w500,
-                ),
-              );
-            },
+          Text(
+            _formatTime((_selectedMinutes * 60 - _elapsedSeconds).clamp(0, 9999)),
+            style: const TextStyle(
+              fontSize: 24,
+              fontFamily: 'Inter',
+              fontWeight: FontWeight.w500,
+            ),
           ),
           const Spacer(),
 
@@ -212,6 +229,13 @@ class _BreathingTimerSheetState extends ConsumerState<BreathingTimerSheet>
     );
   }
 
+  String _formatTime(int seconds) {
+    if (seconds < 0) seconds = 0;
+    final mins = seconds ~/ 60;
+    final secs = seconds % 60;
+    return '$mins:${secs.toString().padLeft(2, '0')}';
+  }
+
   void _start() {
     setState(() {
       _isRunning = true;
@@ -232,50 +256,118 @@ class _BreathingTimerSheetState extends ConsumerState<BreathingTimerSheet>
   void _runBreathingCycle() async {
     if (!_isRunning) return;
 
-    final cycleDuration = _getPatternDuration();
-    _breathController.duration = Duration(milliseconds: cycleDuration);
+    switch (_selectedPattern) {
+      case BreathingPattern.box:
+        await _runBoxBreathing();
+        break;
+      case BreathingPattern.fourSevenEight:
+        await _run478Breathing();
+        break;
+      case BreathingPattern.physiologicalSigh:
+        await _runPhysiologicalSigh();
+        break;
+    }
+  }
 
+  Future<void> _runBoxBreathing() async {
+    // Box breathing: 4s inhale, 4s hold, 4s exhale, 4s hold = 16s total
     // Inhale
     setState(() => _currentPhase = 'Inhale');
-    await _breathController.forward();
+    _breathController.duration = const Duration(seconds: 4);
+    _breathController.forward(from: 0);
+    await Future.delayed(const Duration(seconds: 4));
 
     if (!_isRunning) return;
 
-    // Hold (if pattern has it)
-    if (_selectedPattern == BreathingPattern.fourSevenEight) {
-      setState(() => _currentPhase = 'Hold');
-      await Future.delayed(const Duration(seconds: 7));
-    }
+    // Hold
+    setState(() => _currentPhase = 'Hold');
+    await Future.delayed(const Duration(seconds: 4));
 
     if (!_isRunning) return;
 
     // Exhale
     setState(() => _currentPhase = 'Exhale');
-    await _breathController.reverse();
+    _breathController.duration = const Duration(seconds: 4);
+    _breathController.reverse(from: 1);
+    await Future.delayed(const Duration(seconds: 4));
 
-    // Update elapsed
+    if (!_isRunning) return;
+
+    // Hold
+    setState(() => _currentPhase = 'Hold');
+    await Future.delayed(const Duration(seconds: 4));
+
+    // Update elapsed (16 seconds per cycle)
+    _updateElapsed(16);
+  }
+
+  Future<void> _run478Breathing() async {
+    // 4-7-8: 4s inhale, 7s hold, 8s exhale = 19s total
+
+    // Inhale
+    setState(() => _currentPhase = 'Inhale');
+    _breathController.duration = const Duration(seconds: 4);
+    _breathController.forward(from: 0);
+    await Future.delayed(const Duration(seconds: 4));
+
+    if (!_isRunning) return;
+
+    // Hold 7s
+    setState(() => _currentPhase = 'Hold');
+    await Future.delayed(const Duration(seconds: 7));
+
+    if (!_isRunning) return;
+
+    // Exhale 8s
+    setState(() => _currentPhase = 'Exhale');
+    _breathController.duration = const Duration(seconds: 8);
+    _breathController.forward(from: 0);
+    await Future.delayed(const Duration(seconds: 8));
+
+    // Update elapsed (19 seconds per cycle)
+    _updateElapsed(19);
+  }
+
+  Future<void> _runPhysiologicalSigh() async {
+    // Physiological sigh: 3s first inhale, 3s second inhale (double), 6s exhale = 12s total
+
+    // First inhale
+    setState(() => _currentPhase = 'Inhale 1');
+    _breathController.duration = const Duration(seconds: 3);
+    _breathController.forward(from: 0);
+    await Future.delayed(const Duration(seconds: 3));
+
+    if (!_isRunning) return;
+
+    // Second inhale
+    setState(() => _currentPhase = 'Inhale 2');
+    _breathController.forward(from: 0);
+    await Future.delayed(const Duration(seconds: 3));
+
+    if (!_isRunning) return;
+
+    // Long exhale
+    setState(() => _currentPhase = 'Exhale');
+    _breathController.duration = const Duration(seconds: 6);
+    _breathController.forward(from: 0);
+    await Future.delayed(const Duration(seconds: 6));
+
+    // Update elapsed (12 seconds per cycle)
+    _updateElapsed(12);
+  }
+
+  void _updateElapsed(int seconds) {
     setState(() {
-      _elapsedSeconds += (cycleDuration ~/ 1000) * 2 + (_selectedPattern == BreathingPattern.fourSevenEight ? 7 : 0);
+      _elapsedSeconds += seconds;
       if (_elapsedSeconds >= _selectedMinutes * 60) {
         _isRunning = false;
         _currentPhase = 'Complete!';
       }
     });
 
-    // Loop
+    // Continue cycling if still running
     if (_isRunning) {
       _runBreathingCycle();
-    }
-  }
-
-  int _getPatternDuration() {
-    switch (_selectedPattern) {
-      case BreathingPattern.box:
-        return 4000;
-      case BreathingPattern.fourSevenEight:
-        return 4000;
-      case BreathingPattern.physiologicalSigh:
-        return 3000;
     }
   }
 }

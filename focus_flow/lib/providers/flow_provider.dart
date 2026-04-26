@@ -8,6 +8,7 @@ import 'providers.dart';
 class FlowSessionState {
   final FlowSession? activeSession;
   final int elapsedSeconds;
+  final int currentPhaseElapsed; // Elapsed time in current phase (work or break)
   final bool isRunning;
   final int pomodoroRound;
   final bool isBreak;
@@ -16,6 +17,7 @@ class FlowSessionState {
   const FlowSessionState({
     this.activeSession,
     this.elapsedSeconds = 0,
+    this.currentPhaseElapsed = 0,
     this.isRunning = false,
     this.pomodoroRound = 0,
     this.isBreak = false,
@@ -25,6 +27,7 @@ class FlowSessionState {
   FlowSessionState copyWith({
     FlowSession? activeSession,
     int? elapsedSeconds,
+    int? currentPhaseElapsed,
     bool? isRunning,
     int? pomodoroRound,
     bool? isBreak,
@@ -33,6 +36,7 @@ class FlowSessionState {
     return FlowSessionState(
       activeSession: activeSession ?? this.activeSession,
       elapsedSeconds: elapsedSeconds ?? this.elapsedSeconds,
+      currentPhaseElapsed: currentPhaseElapsed ?? this.currentPhaseElapsed,
       isRunning: isRunning ?? this.isRunning,
       pomodoroRound: pomodoroRound ?? this.pomodoroRound,
       isBreak: isBreak ?? this.isBreak,
@@ -43,21 +47,22 @@ class FlowSessionState {
   double get progress {
     if (sessionType == SessionType.pomodoro) {
       final total = isBreak ? AppConstants.pomodoroShortBreak : AppConstants.pomodoroWork;
-      return total > 0 ? elapsedSeconds / total : 0;
+      return total > 0 ? currentPhaseElapsed / total : 0;
     } else if (sessionType == SessionType.deep) {
       return AppConstants.deepWork > 0 ? elapsedSeconds / AppConstants.deepWork : 0;
     }
+    // For open sessions, show progress based on estimated time or just 0
     return 0;
   }
 
   int get remainingSeconds {
     if (sessionType == SessionType.pomodoro) {
       final total = isBreak ? AppConstants.pomodoroShortBreak : AppConstants.pomodoroWork;
-      return total - elapsedSeconds;
+      return (total - currentPhaseElapsed).clamp(0, total);
     } else if (sessionType == SessionType.deep) {
-      return AppConstants.deepWork - elapsedSeconds;
+      return (AppConstants.deepWork - elapsedSeconds).clamp(0, AppConstants.deepWork);
     }
-    return 0;
+    return 0; // Open session has no countdown
   }
 }
 
@@ -90,9 +95,22 @@ class FlowSessionNotifier extends StateNotifier<FlowSessionState> {
 
   void _startTimer() {
     _timer?.cancel();
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (_stopwatch.elapsed.inSeconds != state.elapsedSeconds) {
-        state = state.copyWith(elapsedSeconds: _stopwatch.elapsed.inSeconds);
+    _timer = Timer.periodic(const Duration(milliseconds: 500), (_) {
+      final totalElapsed = _stopwatch.elapsed.inSeconds;
+      if (totalElapsed != state.elapsedSeconds) {
+        // Calculate current phase elapsed
+        int phaseElapsed = state.currentPhaseElapsed;
+        if (state.sessionType == SessionType.pomodoro) {
+          // For pomodoro, track per-phase time
+          final currentPhaseTarget = state.isBreak
+              ? AppConstants.pomodoroShortBreak
+              : AppConstants.pomodoroWork;
+          phaseElapsed = totalElapsed % currentPhaseTarget;
+        }
+        state = state.copyWith(
+          elapsedSeconds: totalElapsed,
+          currentPhaseElapsed: phaseElapsed,
+        );
         _checkAutoComplete();
       }
     });
@@ -115,14 +133,21 @@ class FlowSessionNotifier extends StateNotifier<FlowSessionState> {
 
   void _handlePomodoroRoundComplete() {
     if (!state.isBreak) {
+      // Switching from work to break
       _stopwatch.reset();
-      state = state.copyWith(isBreak: true, elapsedSeconds: 0);
+      state = state.copyWith(
+        isBreak: true,
+        elapsedSeconds: 0,
+        currentPhaseElapsed: 0,
+      );
     } else {
+      // Switching from break to work
       if (state.pomodoroRound < AppConstants.pomodoroRounds) {
         _stopwatch.reset();
         state = state.copyWith(
           isBreak: false,
           elapsedSeconds: 0,
+          currentPhaseElapsed: 0,
           pomodoroRound: state.pomodoroRound + 1,
         );
       } else {

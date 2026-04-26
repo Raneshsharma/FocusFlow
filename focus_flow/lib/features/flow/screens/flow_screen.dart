@@ -14,14 +14,20 @@ class FlowScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final sessionState = ref.watch(flowSessionProvider);
-    final tasks = ref.watch(tasksProvider);
-    final todayTasks = tasks.where((t) => !t.completed).toList();
+    final tasksAsync = ref.watch(tasksProvider);
 
     return Scaffold(
       backgroundColor: AppColors.surface,
       body: SafeArea(
         child: sessionState.activeSession == null
-            ? _buildIdleState(context, ref, todayTasks)
+            ? tasksAsync.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (_, __) => _buildIdleState(context, ref, []),
+                data: (tasks) {
+                  final todayTasks = tasks.where((t) => !t.completed).toList();
+                  return _buildIdleState(context, ref, todayTasks);
+                },
+              )
             : _buildActiveSession(context, ref, sessionState),
       ),
     );

@@ -83,6 +83,10 @@ final totalFocusMinutesProvider = FutureProvider<int>((ref) async {
 });
 
 final completedTasksCountProvider = Provider<int>((ref) {
-  final tasks = ref.watch(tasksProvider);
-  return tasks.where((t) => t.completed).length;
+  final tasksAsync = ref.watch(tasksProvider);
+  return tasksAsync.when(
+    data: (tasks) => tasks.where((t) => t.completed).length,
+    loading: () => 0,
+    error: (_, __) => 0,
+  );
 });
