@@ -100,6 +100,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final isDarkMode = ref.watch(darkModeProvider);
     final soundEnabled = ref.watch(soundEnabledProvider);
     final displaySettings = ref.watch(displaySettingsProvider);
+    final pomSettings = ref.watch(pomodoroSettingsProvider);
     final notificationSettings = ref.watch(notificationSettingsProvider);
 
     if (_isLoading || settingsAsync.isLoading) {
@@ -181,9 +182,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   iconEmoji: '🍅',
                   iconColor: const Color(0xFFEF4444),
                   title: 'Pomodoro Settings',
-                  subtitle: 'Work: ${displaySettings.pomodoro.workMinutes}min · '
-                      'Break: ${displaySettings.pomodoro.shortBreakMinutes}min · '
-                      'Long: ${displaySettings.pomodoro.longBreakMinutes}min',
+                  subtitle: 'Work: ${pomSettings.workMinutes}min · '
+                      'Break: ${pomSettings.shortBreakMinutes}min · '
+                      'Long: ${pomSettings.longBreakMinutes}min',
                   onTap: () => _showPomodoroSettings(context),
                 ),
               ),
