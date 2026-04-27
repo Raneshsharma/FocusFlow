@@ -2,13 +2,18 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:file_picker/file_picker.dart';
-import 'dart:io';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_icon.dart';
 import '../../../providers/settings_provider.dart';
 import '../../../data/models/app_settings.dart';
+import '../../../data/models/task.dart';
+import '../../../data/models/flow_session.dart';
+import '../../../data/models/template.dart';
+import '../../../data/models/resource.dart';
+import '../../../data/models/daily_stats.dart';
+import '../../../services/file_helper.dart';
+import '../../../services/file_picker_helper.dart';
 import '../../onboarding/providers/onboarding_provider.dart';
 import '../widgets/settings_header.dart';
 import '../widgets/settings_card.dart';
@@ -73,13 +78,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
       final tasks = taskRepo.getAll();
       final sessions = sessionRepo.getAll();
-      final allStats = statsRepo.getAll();
+      final streak = await statsRepo.getCurrentStreak();
 
       final completedTasks = tasks.where((t) => t.completed).length;
       final focusMinutes = sessions.fold<int>(0, (sum, s) => sum + (s.durationSeconds ~/ 60));
-      final streak = allStats.isNotEmpty
-          ? allStats.where((s) => s.tasksCompleted > 0).length
-          : 0;
 
       if (mounted) {
         setState(() {
@@ -180,7 +182,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               SettingsCard(
                 child: SettingsActionTile(
                   iconEmoji: '🍅',
-                  iconColor: const Color(0xFFEF4444),
+                  iconColor: AppColors.sessionPomodoro,
                   title: 'Pomodoro Settings',
                   subtitle: 'Work: ${pomSettings.workMinutes}min · '
                       'Break: ${pomSettings.shortBreakMinutes}min · '
@@ -431,7 +433,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                 style: TextStyle(
                                   fontFamily: 'Inter',
                                   fontSize: 13,
-                                  color: Colors.grey.shade600,
+                                  color: AppColors.grey600,
                                 ),
                               ),
                             ],
@@ -445,7 +447,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       iconColor: Colors.pink,
                       title: 'Privacy',
                       subtitle: 'All data stored locally on your device',
-                      onTap: () {},
+                      onTap: () => _showPrivacyInfo(context),
                       showDivider: false,
                     ),
                   ],
@@ -519,17 +521,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Future<void> _importData() async {
     setState(() => _isImporting = true);
     try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['json'],
-      );
-      if (result == null || result.files.single.path == null) {
+      final result = await pickJsonFile();
+      if (result == null) {
         setState(() => _isImporting = false);
         return;
       }
 
-      final file = File(result.files.single.path!);
-      final contents = await file.readAsString();
+      // Get file contents - bytes for web, path for native
+      String contents;
+      if (result.bytes.isNotEmpty) {
+        // Web platform - use bytes
+        contents = String.fromCharCodes(result.bytes);
+      } else if (result.path.isNotEmpty) {
+        // Native platform - use path
+        contents = await readFile(result.path);
+      } else {
+        setState(() => _isImporting = false);
+        return;
+      }
+
       final data = jsonDecode(contents) as Map<String, dynamic>;
 
       if (!data.containsKey('version')) throw Exception('Invalid backup file');
@@ -709,6 +719,53 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               }
             },
             child: const Text('Reset'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showPrivacyInfo(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Text('❤️', style: TextStyle(fontSize: 24)),
+            SizedBox(width: 8),
+            Text('Privacy'),
+          ],
+        ),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'FocusFlow respects your privacy:',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            SizedBox(height: 12),
+            Text('• All data is stored locally on your device'),
+            SizedBox(height: 8),
+            Text('• No data is sent to external servers'),
+            SizedBox(height: 8),
+            Text('• No tracking or analytics'),
+            SizedBox(height: 8),
+            Text('• You can delete all data anytime'),
+            SizedBox(height: 12),
+            Text(
+              'Your productivity data belongs to you alone.',
+              style: TextStyle(
+                fontStyle: FontStyle.italic,
+                color: AppColors.grey600,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Got it'),
           ),
         ],
       ),

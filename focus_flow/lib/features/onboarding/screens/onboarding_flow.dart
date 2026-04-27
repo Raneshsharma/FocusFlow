@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'welcome_screen.dart';
 import 'energy_levels_screen.dart';
 import 'time_zones_screen.dart';
+import 'onboarding_energy_task_screen.dart';
 import '../widgets/add_first_task_sheet.dart';
 import '../providers/onboarding_provider.dart';
 
@@ -15,20 +16,16 @@ class OnboardingFlow extends ConsumerStatefulWidget {
 }
 
 class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
-  final PageController _pageController = PageController();
-
-  @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
-  }
+  int _currentPage = 0;
+  bool _isNavigating = false;
 
   void _goToPage(int page) {
-    _pageController.animateToPage(
-      page,
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
-    );
+    if (_isNavigating) return;
+    if (page < 0 || page > 3) return;
+
+    setState(() {
+      _currentPage = page;
+    });
   }
 
   void _showAddTaskSheet() {
@@ -36,7 +33,9 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
+      isDismissible: false,
+      enableDrag: false,
+      builder: (ctx) => Container(
         decoration: const BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -50,10 +49,14 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
   }
 
   void _navigateToToday() {
+    Navigator.of(context).pop(); // Close bottom sheet if open
     context.go('/focus');
   }
 
   Future<void> _skipOnboarding() async {
+    if (_isNavigating) return;
+    _isNavigating = true;
+
     await ref.read(onboardingProvider.notifier).completeOnboarding();
     if (mounted) {
       _navigateToToday();
@@ -63,9 +66,8 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: PageView(
-        controller: _pageController,
-        physics: const NeverScrollableScrollPhysics(),
+      body: IndexedStack(
+        index: _currentPage,
         children: [
           WelcomeScreen(
             onContinue: () => _goToPage(1),
@@ -75,6 +77,9 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
             onContinue: () => _goToPage(2),
           ),
           TimeZonesScreen(
+            onContinue: () => _goToPage(3),
+          ),
+          OnboardingEnergyTaskScreen(
             onContinue: _showAddTaskSheet,
           ),
         ],

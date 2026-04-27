@@ -36,9 +36,11 @@ class FocusScreen extends ConsumerWidget {
                 _buildHeader(context, ref),
                 Expanded(
                   child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     child: Column(
                       children: [
+                        // Morning card
                         TimeZoneCard(
                           icon: '🌅',
                           title: 'Morning',
@@ -48,7 +50,9 @@ class FocusScreen extends ConsumerWidget {
                           tasks: incomplete.where((t) => t.zone == TimeZone.morning).toList(),
                           onAddTask: () => _showAddTaskDialog(context, TimeZone.morning),
                         ),
+                        // Fixed 12px spacing
                         const SizedBox(height: 12),
+                        // Afternoon card
                         TimeZoneCard(
                           icon: '☀️',
                           title: 'Afternoon',
@@ -58,7 +62,9 @@ class FocusScreen extends ConsumerWidget {
                           tasks: incomplete.where((t) => t.zone == TimeZone.afternoon).toList(),
                           onAddTask: () => _showAddTaskDialog(context, TimeZone.afternoon),
                         ),
+                        // Fixed 12px spacing
                         const SizedBox(height: 12),
+                        // Evening card
                         TimeZoneCard(
                           icon: '🌙',
                           title: 'Evening',
@@ -68,12 +74,15 @@ class FocusScreen extends ConsumerWidget {
                           tasks: incomplete.where((t) => t.zone == TimeZone.evening).toList(),
                           onAddTask: () => _showAddTaskDialog(context, TimeZone.evening),
                         ),
-                        const SizedBox(height: 20),
+                        // 16px before Anytime Pool (slightly more breathing room)
+                        const SizedBox(height: 16),
+                        // Anytime Pool
                         AnytimePool(
                           tasks: anytime,
                           onAddTask: () => _showAddTaskDialog(context, TimeZone.anytime),
                         ),
-                        const SizedBox(height: 80),
+                        // Bottom padding to prevent overflow
+                        const SizedBox(height: 100),
                       ],
                     ),
                   ),
@@ -89,12 +98,12 @@ class FocusScreen extends ConsumerWidget {
               backgroundColor: AppColors.amber,
               elevation: 4,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(14),
               ),
-              child: AppIcon(
-                AppIcons.add,
+              child: const Icon(
+                Icons.add,
                 color: AppColors.deepSlate,
-                size: 24,
+                size: 26,
               ),
             ),
           ),
@@ -114,82 +123,111 @@ class FocusScreen extends ConsumerWidget {
     final displayDate = utils.DateUtils.formatDisplayDate(now);
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+      child: Column(
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  displayDate,
-                  style: const TextStyle(
-                    fontFamily: 'Montserrat',
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.navy,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                const Text(
-                  'Plan your energy, not just your time',
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 12,
-                    color: AppColors.grey500,
-                  ),
-                ),
-              ],
-            ),
-          ),
           Row(
-            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              GestureDetector(
-                onTap: () => _showFocusModeSheet(context, ref),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: AppColors.deepSlate,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      AppIcon(
-                        AppIcons.gpsFixed,
-                        color: AppColors.amber,
-                        size: 16,
+              // Left side - Date and tagline
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      displayDate,
+                      style: const TextStyle(
+                        fontFamily: 'Montserrat',
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.navy,
+                        height: 1.2,
                       ),
-                      SizedBox(width: 6),
-                      Text(
-                        'Focus mode',
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.white,
-                        ),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'Plan your energy, not just your time',
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 13,
+                        fontWeight: FontWeight.w400,
+                        color: AppColors.grey600,
+                        height: 1.3,
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(width: 4),
-              GestureDetector(
-                onTap: () => _showSettingsSheet(context),
-                child: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppColors.grey100,
-                    borderRadius: BorderRadius.circular(12),
+              // Right side - Action buttons row
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // Focus mode button
+                  GestureDetector(
+                    onTap: () => _showFocusModeSheet(context, ref),
+                    child: Container(
+                      height: 36,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: AppColors.deepSlate,
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: const [
+                          Icon(
+                            Icons.gps_fixed,
+                            color: AppColors.amber,
+                            size: 16,
+                          ),
+                          SizedBox(width: 6),
+                          Text(
+                            'Focus mode',
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                  child: const AppIcon(
-                    AppIcons.settingsOutline,
-                    color: AppColors.grey600,
-                    size: 20,
+                  const SizedBox(width: 8),
+                  // Insights button
+                  GestureDetector(
+                    onTap: () => context.go('/insights'),
+                    child: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: AppColors.amber.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Center(
+                        child: Text('📊', style: TextStyle(fontSize: 18)),
+                      ),
+                    ),
                   ),
-                ),
+                  const SizedBox(width: 8),
+                  // Settings button
+                  GestureDetector(
+                    onTap: () => context.go('/settings'),
+                    child: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: AppColors.grey100,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Center(
+                        child: Text('⚙️', style: TextStyle(fontSize: 18)),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -203,12 +241,7 @@ class FocusScreen extends ConsumerWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Padding(
-        padding: EdgeInsets.only(
-          top: MediaQuery.of(context).size.height * 0.08,
-        ),
-        child: AddTaskDialog(preselectedZone: preselectedZone),
-      ),
+      builder: (context) => AddTaskDialog(preselectedZone: preselectedZone),
     );
   }
 
@@ -225,6 +258,7 @@ class FocusScreen extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // Handle bar
             Container(
               width: 40,
               height: 4,
@@ -243,7 +277,7 @@ class FocusScreen extends ConsumerWidget {
                 color: AppColors.navy,
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             const Text(
               'Focus mode helps you concentrate on your current task by minimizing distractions.',
               textAlign: TextAlign.center,
@@ -273,7 +307,7 @@ class FocusScreen extends ConsumerWidget {
                   child: _QuickStartCard(
                     icon: '🍅',
                     label: 'Pomodoro',
-                    color: const Color(0xFFEF4444),
+                    color: AppColors.sessionPomodoro,
                     onTap: () {
                       Navigator.pop(context);
                       ref.read(flowSessionProvider.notifier).startSession(SessionType.pomodoro);
@@ -286,7 +320,7 @@ class FocusScreen extends ConsumerWidget {
                   child: _QuickStartCard(
                     icon: '🧠',
                     label: 'Deep Work',
-                    color: const Color(0xFFEC4899),
+                    color: AppColors.sessionDeep,
                     onTap: () {
                       Navigator.pop(context);
                       ref.read(flowSessionProvider.notifier).startSession(SessionType.deep);
@@ -295,80 +329,6 @@ class FocusScreen extends ConsumerWidget {
                   ),
                 ),
               ],
-            ),
-            const SizedBox(height: 24),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showSettingsSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(24),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: AppColors.grey300,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 24),
-            const Text(
-              'Settings',
-              style: TextStyle(
-                fontFamily: 'Montserrat',
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                color: AppColors.navy,
-              ),
-            ),
-            const SizedBox(height: 20),
-            _SettingsItem(
-              icon: '🎨',
-              label: 'Appearance',
-              onTap: () {
-                Navigator.pop(context);
-              },
-            ),
-            _SettingsItem(
-              icon: '🔔',
-              label: 'Notifications',
-              onTap: () {
-                Navigator.pop(context);
-              },
-            ),
-            _SettingsItem(
-              icon: '🌙',
-              label: 'Do Not Disturb',
-              onTap: () {
-                Navigator.pop(context);
-              },
-            ),
-            _SettingsItem(
-              icon: '📊',
-              label: 'Statistics',
-              onTap: () {
-                Navigator.pop(context);
-              },
-            ),
-            _SettingsItem(
-              icon: 'ℹ️',
-              label: 'About',
-              onTap: () {
-                Navigator.pop(context);
-              },
             ),
             const SizedBox(height: 16),
           ],
@@ -413,14 +373,14 @@ class _QuickStartCard extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 40,
-              height: 40,
+              width: 44,
+              height: 44,
               decoration: BoxDecoration(
                 color: color.withOpacity(0.12),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Center(
-                child: Text(icon, style: const TextStyle(fontSize: 20)),
+                child: Text(icon, style: const TextStyle(fontSize: 22)),
               ),
             ),
             const SizedBox(height: 8),
@@ -432,50 +392,6 @@ class _QuickStartCard extends StatelessWidget {
                 fontWeight: FontWeight.w600,
                 color: AppColors.navy,
               ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _SettingsItem extends StatelessWidget {
-  final String icon;
-  final String label;
-  final VoidCallback onTap;
-
-  const _SettingsItem({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        child: Row(
-          children: [
-            Text(icon, style: const TextStyle(fontSize: 20)),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Text(
-                label,
-                style: const TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 15,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.navy,
-                ),
-              ),
-            ),
-            AppIcon(
-              AppIcons.chevronRight,
-              color: AppColors.grey400,
-              size: 20,
             ),
           ],
         ),

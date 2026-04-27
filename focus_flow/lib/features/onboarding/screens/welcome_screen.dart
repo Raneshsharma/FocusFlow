@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/responsive_helper.dart';
 
 class WelcomeScreen extends StatelessWidget {
   final VoidCallback onContinue;
@@ -16,88 +17,104 @@ class WelcomeScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.white,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Column(
-            children: [
-              const Spacer(flex: 2),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isTablet = constraints.maxWidth >= ResponsiveBreakpoints.tablet;
+            final horizontalPadding = isTablet ? 48.0 : 24.0;
+            final maxContentWidth = isTablet ? 500.0 : double.infinity;
 
-              // Wave illustration
-              _WaveIllustration(),
+            return Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: maxContentWidth),
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+                  child: Column(
+                    children: [
+                      const Spacer(flex: 2),
 
-              const Spacer(flex: 1),
+                      // Wave illustration
+                      _WaveIllustration(
+                        size: isTablet ? 280 : 200,
+                        iconSize: isTablet ? 80 : 60,
+                      ),
 
-              // Headline
-              Text(
-                'Work with your brain,\nnot against it',
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontFamily: 'Montserrat',
-                  fontSize: 28,
-                  fontWeight: FontWeight.w700,
-                  height: 1.2,
-                  color: AppColors.navy,
-                ),
-              ),
+                      const Spacer(flex: 1),
 
-              const SizedBox(height: 12),
+                      // Headline
+                      Text(
+                        'Work with your brain,\nnot against it',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontFamily: 'Montserrat',
+                          fontSize: isTablet ? 32 : 28,
+                          fontWeight: FontWeight.w700,
+                          height: 1.2,
+                          color: AppColors.navy,
+                        ),
+                      ),
 
-              // Subtext
-              Text(
-                'FocusFlow helps you match tasks to your energy — not the other way around.',
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 16,
-                  fontWeight: FontWeight.w400,
-                  height: 1.5,
-                  color: AppColors.grey500,
-                ),
-              ),
+                      const SizedBox(height: 12),
 
-              const Spacer(flex: 2),
+                      // Subtext
+                      Text(
+                        'FocusFlow helps you match tasks to your energy — not the other way around.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: isTablet ? 18 : 16,
+                          fontWeight: FontWeight.w400,
+                          height: 1.5,
+                          color: AppColors.grey500,
+                        ),
+                      ),
 
-              // Continue button
-              SizedBox(
-                width: 320,
-                child: ElevatedButton(
-                  onPressed: onContinue,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.teal,
-                    foregroundColor: Colors.white,
-                    minimumSize: const Size(double.infinity, 56),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    textStyle: const TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
+                      const Spacer(flex: 2),
+
+                      // Continue button
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: onContinue,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.teal,
+                            foregroundColor: Colors.white,
+                            minimumSize: Size(double.infinity, isTablet ? 64 : 56),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            textStyle: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: isTablet ? 18 : 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          child: const Text('Continue'),
+                        ),
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // Skip link
+                      TextButton(
+                        onPressed: onSkip,
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppColors.grey400,
+                          textStyle: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: isTablet ? 16 : 14,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                        child: const Text('Skip for now'),
+                      ),
+
+                      const SizedBox(height: 32),
+                    ],
                   ),
-                  child: const Text('Continue'),
                 ),
               ),
-
-              const SizedBox(height: 16),
-
-              // Skip link
-              TextButton(
-                onPressed: onSkip,
-                style: TextButton.styleFrom(
-                  foregroundColor: AppColors.grey400,
-                  textStyle: const TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 14,
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
-                child: const Text('Skip for now'),
-              ),
-
-              const SizedBox(height: 32),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );
@@ -105,23 +122,31 @@ class WelcomeScreen extends StatelessWidget {
 }
 
 class _WaveIllustration extends StatelessWidget {
+  final double size;
+  final double iconSize;
+
+  const _WaveIllustration({
+    required this.size,
+    required this.iconSize,
+  });
+
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 200,
-      height: 140,
+      width: size,
+      height: size * 0.7,
       child: CustomPaint(
         painter: _WavePainter(),
         child: Center(
           child: Container(
-            width: 60,
-            height: 60,
+            width: iconSize,
+            height: iconSize,
             decoration: BoxDecoration(
               color: AppColors.teal.withOpacity(0.15),
               shape: BoxShape.circle,
             ),
-            child: const Center(
-              child: Text('🌊', style: TextStyle(fontSize: 28)),
+            child: Center(
+              child: Text('🌊', style: TextStyle(fontSize: iconSize * 0.47)),
             ),
           ),
         ),

@@ -8,6 +8,8 @@ import '../widgets/breathing_timer.dart';
 import '../widgets/micro_break_card.dart';
 import '../widgets/wind_down_routine.dart';
 import '../widgets/ambient_sound_mixer.dart';
+import '../widgets/adaptive_rest_card.dart';
+import '../widgets/weekly_summary_card.dart';
 
 class RestScreen extends ConsumerWidget {
   const RestScreen({super.key});
@@ -41,7 +43,7 @@ class RestScreen extends ConsumerWidget {
                 child: Text(
                   "You've earned this break.",
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: Colors.grey,
+                    color: AppColors.grey500,
                   ),
                 ),
               ),
@@ -86,7 +88,7 @@ class RestScreen extends ConsumerWidget {
                                 loading: () => 'Loading...',
                                 error: (_, __) => 'Start your journey!',
                               ),
-                              style: TextStyle(color: Colors.grey.shade600),
+                              style: const TextStyle(color: AppColors.grey600),
                             ),
                           ],
                         ),
@@ -95,6 +97,10 @@ class RestScreen extends ConsumerWidget {
                   ),
                 ),
               ),
+              const SizedBox(height: 16),
+
+              // Adaptive rest card
+              const AdaptiveRestCard(),
               const SizedBox(height: 32),
 
               // Take a break section
@@ -116,42 +122,42 @@ class RestScreen extends ConsumerWidget {
                       icon: 'coffee',
                       title: 'Coffee Break',
                       duration: '5 min',
-                      color: Colors.brown,
+                      color: AppColors.brown,
                     ),
                     SizedBox(width: 12),
                     MicroBreakCard(
                       icon: 'walk',
                       title: 'Take a Walk',
                       duration: '10 min',
-                      color: Colors.green,
+                      color: AppColors.success,
                     ),
                     SizedBox(width: 12),
                     MicroBreakCard(
                       icon: 'visibility_off',
                       title: 'Look Away',
                       duration: '20 sec',
-                      color: Colors.blue,
+                      color: AppColors.energyLow,
                     ),
                     SizedBox(width: 12),
                     MicroBreakCard(
                       icon: 'accessibility',
                       title: 'Stretch',
                       duration: '5 min',
-                      color: Colors.purple,
+                      color: AppColors.purple,
                     ),
                     SizedBox(width: 12),
                     MicroBreakCard(
                       icon: 'water_drop',
                       title: 'Hydrate',
                       duration: '2 min',
-                      color: Colors.cyan,
+                      color: AppColors.zoneMorning,
                     ),
                     SizedBox(width: 12),
                     MicroBreakCard(
                       icon: 'spa',
                       title: 'Relax',
                       duration: '5 min',
-                      color: Colors.pink,
+                      color: AppColors.categoryPink,
                     ),
                   ],
                 ),
@@ -178,12 +184,12 @@ class RestScreen extends ConsumerWidget {
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: Colors.blue.withOpacity(0.1),
+                            color: AppColors.energyLow.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: AppIcon(
                             AppIcons.air,
-                            color: Colors.blue,
+                            color: AppColors.energyLow,
                             size: 32,
                           ),
                         ),
@@ -202,7 +208,7 @@ class RestScreen extends ConsumerWidget {
                               const SizedBox(height: 4),
                               Text(
                                 'Box breathing, 4-7-8, or physiological sigh',
-                                style: TextStyle(color: Colors.grey.shade600),
+                                style: const TextStyle(color: AppColors.grey600),
                               ),
                             ],
                           ),
@@ -226,12 +232,12 @@ class RestScreen extends ConsumerWidget {
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: Colors.purple.withOpacity(0.1),
+                            color: AppColors.purple.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: AppIcon(
                             AppIcons.nightlight,
-                            color: Colors.purple,
+                            color: AppColors.purple,
                             size: 32,
                           ),
                         ),
@@ -250,7 +256,7 @@ class RestScreen extends ConsumerWidget {
                               const SizedBox(height: 4),
                               Text(
                                 'Prepare for better sleep',
-                                style: TextStyle(color: Colors.grey.shade600),
+                                style: const TextStyle(color: AppColors.grey600),
                               ),
                             ],
                           ),
@@ -298,7 +304,7 @@ class RestScreen extends ConsumerWidget {
                               const SizedBox(height: 4),
                               Text(
                                 'Rain, fireplace, ocean waves & more',
-                                style: TextStyle(color: Colors.grey.shade600),
+                                style: const TextStyle(color: AppColors.grey600),
                               ),
                             ],
                           ),
@@ -309,6 +315,10 @@ class RestScreen extends ConsumerWidget {
                   ),
                 ),
               ),
+              const SizedBox(height: 24),
+
+              // Weekly summary card
+              const WeeklySummaryCard(),
               const SizedBox(height: 24),
             ],
           ),

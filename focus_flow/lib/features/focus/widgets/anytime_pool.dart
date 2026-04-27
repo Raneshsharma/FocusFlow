@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/models/task.dart';
 import '../../../data/models/enums.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/widgets/app_icon.dart';
-import 'task_card.dart';
+import 'task_item.dart';
 
 class AnytimePool extends StatefulWidget {
   final List<Task> tasks;
@@ -29,6 +29,9 @@ class _AnytimePoolState extends State<AnytimePool> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
+        border: Border(
+          left: BorderSide(color: AppColors.teal, width: 4),
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.06),
@@ -39,31 +42,36 @@ class _AnytimePoolState extends State<AnytimePool> {
       ),
       child: Column(
         children: [
-          // Header
+          // Header - fixed 64px height for consistency with TimeZoneCard
           InkWell(
             onTap: () => setState(() => _isExpanded = !_isExpanded),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
             child: Container(
-              padding: const EdgeInsets.all(16),
+              height: 64,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: AppColors.teal.withOpacity(0.04),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+              ),
               child: Row(
                 children: [
-                  // Funnel icon
+                  // Infinity icon - 44x44 container like zone cards
                   Container(
                     width: 44,
                     height: 44,
                     decoration: BoxDecoration(
-                      color: AppColors.teal.withOpacity(0.12),
+                      color: AppColors.teal.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: AppIcon(
-                      AppIcons.infinity,
-                      color: AppColors.teal,
-                      size: 22,
+                    child: const Center(
+                      child: Text('♾️', style: TextStyle(fontSize: 22)),
                     ),
                   ),
-                  const SizedBox(width: 14),
+                  const SizedBox(width: 12),
                   // Title and subtitle
                   Expanded(
                     child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
@@ -81,157 +89,185 @@ class _AnytimePoolState extends State<AnytimePool> {
                           style: TextStyle(
                             fontFamily: 'Inter',
                             fontSize: 12,
-                            color: Colors.grey.shade600,
+                            fontWeight: FontWeight.w400,
+                            color: AppColors.grey600,
                           ),
                         ),
                       ],
                     ),
                   ),
-                  // Task count
+                  // Task count - fixed size container
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    height: 28,
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
                     decoration: BoxDecoration(
                       color: AppColors.teal.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: BorderRadius.circular(14),
                     ),
-                    child: Text(
-                      '${widget.tasks.length}',
-                      style: const TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.teal,
+                    child: Center(
+                      child: Text(
+                        '${widget.tasks.length}',
+                        style: const TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.teal,
+                        ),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 4),
-                  // Add button
+                  const SizedBox(width: 8),
+                  // Add button - identical size to zone cards (28x28)
                   GestureDetector(
                     onTap: widget.onAddTask,
                     child: Container(
-                      padding: const EdgeInsets.all(8),
+                      width: 28,
+                      height: 28,
                       decoration: BoxDecoration(
-                        color: AppColors.teal.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(10),
+                        color: AppColors.teal.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(8),
                       ),
-                      child: AppIcon(
-                        AppIcons.add,
-                        size: 18,
-                        color: AppColors.teal,
+                      child: Center(
+                        child: Text(
+                          '+',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.teal,
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 4),
-                  AppIcon(
-                    _isExpanded ? AppIcons.expandLess : AppIcons.expandMore,
-                    color: Colors.grey.shade400,
-                    size: 24,
+                  const SizedBox(width: 6),
+                  // Expand arrow
+                  Icon(
+                    _isExpanded ? Icons.expand_less : Icons.expand_more,
+                    size: 22,
+                    color: AppColors.grey500,
                   ),
                 ],
               ),
             ),
           ),
 
-          // Filter chips
+          // Filter chips and content
           if (_isExpanded) ...[
+            // Filter row - 8px top padding
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  _buildFilterChip(
-                    label: 'All',
-                    isSelected: _selectedFilter == null,
-                    onTap: () => setState(() => _selectedFilter = null),
-                  ),
-                  const SizedBox(width: 10),
-                  _buildFilterChip(
-                    label: 'Quick',
-                    emoji: '⚡',
-                    color: AppColors.energyQuick,
-                    isSelected: _selectedFilter == EnergyLevel.quick,
-                    onTap: () => setState(() => _selectedFilter = EnergyLevel.quick),
-                  ),
-                  const SizedBox(width: 10),
-                  _buildFilterChip(
-                    label: 'Deep',
-                    emoji: '🧠',
-                    color: AppColors.energyDeep,
-                    isSelected: _selectedFilter == EnergyLevel.deep,
-                    onTap: () => setState(() => _selectedFilter = EnergyLevel.deep),
-                  ),
-                  const SizedBox(width: 10),
-                  _buildFilterChip(
-                    label: 'Low',
-                    emoji: '🔋',
-                    color: AppColors.energyLow,
-                    isSelected: _selectedFilter == EnergyLevel.low,
-                    onTap: () => setState(() => _selectedFilter = EnergyLevel.low),
-                  ),
-                ],
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    _buildFilterChip(
+                      label: 'All',
+                      isSelected: _selectedFilter == null,
+                      onTap: () => setState(() => _selectedFilter = null),
+                    ),
+                    const SizedBox(width: 8),
+                    _buildFilterChip(
+                      label: 'Quick',
+                      emoji: '⚡',
+                      color: AppColors.energyQuick,
+                      isSelected: _selectedFilter == EnergyLevel.quick,
+                      onTap: () => setState(() => _selectedFilter = EnergyLevel.quick),
+                    ),
+                    const SizedBox(width: 8),
+                    _buildFilterChip(
+                      label: 'Deep',
+                      emoji: '🧠',
+                      color: AppColors.energyDeep,
+                      isSelected: _selectedFilter == EnergyLevel.deep,
+                      onTap: () => setState(() => _selectedFilter = EnergyLevel.deep),
+                    ),
+                    const SizedBox(width: 8),
+                    _buildFilterChip(
+                      label: 'Low',
+                      emoji: '🔋',
+                      color: AppColors.energyLow,
+                      isSelected: _selectedFilter == EnergyLevel.low,
+                      onTap: () => setState(() => _selectedFilter = EnergyLevel.low),
+                    ),
+                  ],
+                ),
               ),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 12),
 
             // Content
             Container(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
               child: filteredTasks.isEmpty
-                  ? Container(
-                      padding: const EdgeInsets.symmetric(vertical: 32),
-                      decoration: BoxDecoration(
-                        color: AppColors.grey50,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: AppColors.grey200.withOpacity(0.5),
-                        ),
-                      ),
-                      child: Column(
-                        children: [
-                          GestureDetector(
-                            onTap: widget.onAddTask,
-                            child: Container(
-                              padding: const EdgeInsets.all(14),
-                              decoration: BoxDecoration(
-                                color: AppColors.teal.withOpacity(0.1),
-                                shape: BoxShape.circle,
-                              ),
-                              child: AppIcon(
-                                AppIcons.add,
-                                color: AppColors.teal.withOpacity(0.5),
-                                size: 28,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 14),
-                          Text(
-                            'No tasks in the pool',
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.grey600,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            'Add tasks to any zone or create new ones',
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 13,
-                              color: AppColors.grey500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
+                  ? _buildEmptyState()
                   : Column(
                       children: filteredTasks.map((task) => Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: TaskCard(task: task),
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: TaskItem(task: task),
                       )).toList(),
                     ),
             ),
           ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 24),
+      decoration: BoxDecoration(
+        color: AppColors.grey50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: AppColors.grey200.withOpacity(0.5),
+        ),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Plus button - centered
+          GestureDetector(
+            onTap: widget.onAddTask,
+            child: Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: AppColors.teal.withOpacity(0.08),
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: Text(
+                  '+',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.teal.withOpacity(0.6),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'No tasks in the pool',
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: AppColors.grey700,
+            ),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Add tasks to any zone or create new ones',
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 12,
+              fontWeight: FontWeight.w400,
+              color: AppColors.grey500,
+            ),
+          ),
         ],
       ),
     );
@@ -245,18 +281,18 @@ class _AnytimePoolState extends State<AnytimePool> {
     required VoidCallback onTap,
   }) {
     final bgColor = isSelected
-        ? (color ?? AppColors.navy)
+        ? (color ?? AppColors.teal)
         : AppColors.grey100;
     final textColor = isSelected ? Colors.white : AppColors.grey600;
-    final chipColor = color ?? AppColors.navy;
+    final chipColor = color ?? AppColors.teal;
 
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           color: bgColor,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(16),
           border: isSelected
               ? Border.all(color: chipColor, width: 1.5)
               : null,
@@ -266,7 +302,7 @@ class _AnytimePoolState extends State<AnytimePool> {
           children: [
             if (emoji != null) ...[
               Text(emoji, style: const TextStyle(fontSize: 12)),
-              const SizedBox(width: 5),
+              const SizedBox(width: 4),
             ],
             Text(
               label,

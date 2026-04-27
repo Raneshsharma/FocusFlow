@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/responsive_helper.dart';
 
 class TimeZonesScreen extends StatelessWidget {
   final VoidCallback onContinue;
@@ -16,99 +17,112 @@ class TimeZonesScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.white,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 32),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isTablet = constraints.maxWidth >= ResponsiveBreakpoints.tablet;
+            final horizontalPadding = isTablet ? 48.0 : 24.0;
+            final maxContentWidth = isTablet ? 600.0 : double.infinity;
 
-              // Section title
-              const Text(
-                'Your energy changes throughout the day',
-                style: TextStyle(
-                  fontFamily: 'Montserrat',
-                  fontSize: 22,
-                  fontWeight: FontWeight.w600,
-                  height: 1.3,
-                  color: AppColors.navy,
-                ),
-              ),
+            return Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: maxContentWidth),
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(height: isTablet ? 48 : 32),
 
-              const SizedBox(height: 6),
+                      // Section title
+                      Text(
+                        'Your energy changes throughout the day',
+                        style: TextStyle(
+                          fontFamily: 'Montserrat',
+                          fontSize: isTablet ? 26 : 22,
+                          fontWeight: FontWeight.w600,
+                          height: 1.3,
+                          color: AppColors.navy,
+                        ),
+                      ),
 
-              // Section subtitle
-              const Text(
-                'Schedule tasks for when your brain is ready.',
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 15,
-                  fontWeight: FontWeight.w400,
-                  height: 1.4,
-                  color: AppColors.grey500,
-                ),
-              ),
+                      const SizedBox(height: 6),
 
-              const SizedBox(height: 20),
+                      // Section subtitle
+                      Text(
+                        'Schedule tasks for when your brain is ready.',
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: isTablet ? 17 : 15,
+                          fontWeight: FontWeight.w400,
+                          height: 1.4,
+                          color: AppColors.grey500,
+                        ),
+                      ),
 
-              // Zone rows
-              Expanded(
-                child: ListView(
-                  children: [
-                    _ZoneRow(
-                      label: 'Morning',
-                      timeRange: '5 AM – 12 PM',
-                      description: 'Usually your sharpest time. Tackle important tasks here.',
-                      color: AppColors.zoneMorning,
-                      isCurrentZone: currentZone == 'morning',
-                    ),
-                    const SizedBox(height: 10),
-                    _ZoneRow(
-                      label: 'Afternoon',
-                      timeRange: '12 PM – 6 PM',
-                      description: 'After-lunch dip is real. Save lighter work for here.',
-                      color: AppColors.zoneAfternoon,
-                      isCurrentZone: currentZone == 'afternoon',
-                    ),
-                    const SizedBox(height: 10),
-                    _ZoneRow(
-                      label: 'Evening',
-                      timeRange: '6 PM – 12 AM',
-                      description: 'Wind down. Easy tasks only — or save for tomorrow.',
-                      color: AppColors.zoneEvening,
-                      isCurrentZone: currentZone == 'evening',
-                    ),
-                    const SizedBox(height: 10),
-                    const _AnytimeZoneRow(),
-                  ],
-                ),
-              ),
+                      SizedBox(height: isTablet ? 32 : 20),
 
-              // Continue button
-              SizedBox(
-                width: 320,
-                child: ElevatedButton(
-                  onPressed: onContinue,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.teal,
-                    foregroundColor: Colors.white,
-                    minimumSize: const Size(double.infinity, 56),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    textStyle: const TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
+                      // Zone rows
+                      Expanded(
+                        child: ListView(
+                          children: [
+                            _ZoneRow(
+                              label: 'Morning',
+                              timeRange: '5 AM – 12 PM',
+                              description: 'Usually your sharpest time. Tackle important tasks here.',
+                              color: AppColors.zoneMorning,
+                              isCurrentZone: currentZone == 'morning',
+                            ),
+                            SizedBox(height: isTablet ? 16 : 10),
+                            _ZoneRow(
+                              label: 'Afternoon',
+                              timeRange: '12 PM – 6 PM',
+                              description: 'After-lunch dip is real. Save lighter work for here.',
+                              color: AppColors.zoneAfternoon,
+                              isCurrentZone: currentZone == 'afternoon',
+                            ),
+                            SizedBox(height: isTablet ? 16 : 10),
+                            _ZoneRow(
+                              label: 'Evening',
+                              timeRange: '6 PM – 12 AM',
+                              description: 'Wind down. Easy tasks only — or save for tomorrow.',
+                              color: AppColors.zoneEvening,
+                              isCurrentZone: currentZone == 'evening',
+                            ),
+                            SizedBox(height: isTablet ? 16 : 10),
+                            const _AnytimeZoneRow(),
+                          ],
+                        ),
+                      ),
+
+                      // Continue button
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: onContinue,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.teal,
+                            foregroundColor: Colors.white,
+                            minimumSize: Size(double.infinity, isTablet ? 64 : 56),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            textStyle: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: isTablet ? 18 : 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          child: const Text('Continue'),
+                        ),
+                      ),
+
+                      SizedBox(height: isTablet ? 48 : 32),
+                    ],
                   ),
-                  child: const Text('Continue'),
                 ),
               ),
-
-              const SizedBox(height: 32),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );

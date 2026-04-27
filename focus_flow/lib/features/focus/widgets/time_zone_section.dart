@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_icon.dart';
 import '../../../data/models/task.dart';
 import '../../../data/models/enums.dart';
@@ -56,7 +57,7 @@ class TimeZoneSection extends StatelessWidget {
             Text(
               timeRange,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Colors.grey,
+                color: AppColors.grey500,
               ),
             ),
             if (isCurrentBlock) ...[
@@ -82,7 +83,7 @@ class TimeZoneSection extends StatelessWidget {
               '${tasks.length} task${tasks.length == 1 ? '' : 's'}',
               style: TextStyle(
                 fontSize: 12,
-                color: Colors.grey.shade600,
+                color: AppColors.grey600,
               ),
             ),
           ],
@@ -92,16 +93,16 @@ class TimeZoneSection extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.grey.shade100,
+              color: AppColors.grey100,
               borderRadius: BorderRadius.circular(8),
             ),
             child: const Row(
               children: [
-                AppIcon(AppIcons.inbox, size: 20, color: Colors.grey),
+                AppIcon(AppIcons.inbox, size: 20, color: AppColors.grey500),
                 SizedBox(width: 8),
                 Text(
                   'No tasks scheduled',
-                  style: TextStyle(color: Colors.grey),
+                  style: TextStyle(color: AppColors.grey500),
                 ),
               ],
             ),

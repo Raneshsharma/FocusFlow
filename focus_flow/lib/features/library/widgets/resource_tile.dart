@@ -30,7 +30,7 @@ class ResourceTile extends StatelessWidget {
       case ResourceCategory.tool:
         return AppColors.energyQuick;
       case ResourceCategory.video:
-        return const Color(0xFFE91E63);
+        return AppColors.categoryPink;
       case ResourceCategory.course:
         return AppColors.energyDeep;
       default:
@@ -79,7 +79,7 @@ class ResourceTile extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 12,
-                  color: Colors.grey.shade600,
+                  color: AppColors.grey600,
                 ),
               ),
             ),

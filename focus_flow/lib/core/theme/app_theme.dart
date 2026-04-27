@@ -341,20 +341,88 @@ class AppTheme {
         height: 56,
         backgroundColor: AppColors.charcoal,
         indicatorColor: AppColors.amber.withOpacity(0.2),
+        labelTextStyle: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return const TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: AppColors.amber,
+            );
+          }
+          return const TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: AppColors.grey400,
+          );
+        }),
+        iconTheme: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return const IconThemeData(color: AppColors.amber, size: 24);
+          }
+          return const IconThemeData(color: AppColors.grey400, size: 24);
+        }),
       ),
       textTheme: const TextTheme(
+        // Display
+        displayLarge: TextStyle(
+          fontFamily: 'Montserrat',
+          fontSize: 48,
+          fontWeight: FontWeight.w800,
+          color: Colors.white,
+        ),
+        displayMedium: TextStyle(
+          fontFamily: 'Montserrat',
+          fontSize: 56,
+          fontWeight: FontWeight.w800,
+          color: Colors.white,
+        ),
+        displaySmall: TextStyle(
+          fontFamily: 'Montserrat',
+          fontSize: 64,
+          fontWeight: FontWeight.w800,
+          color: Colors.white,
+        ),
+        // Headings
+        headlineLarge: TextStyle(
+          fontFamily: 'Montserrat',
+          fontSize: 32,
+          fontWeight: FontWeight.w800,
+          color: Colors.white,
+        ),
         headlineMedium: TextStyle(
           fontFamily: 'Montserrat',
           fontSize: 36,
           fontWeight: FontWeight.w800,
           color: Colors.white,
         ),
+        headlineSmall: TextStyle(
+          fontFamily: 'Montserrat',
+          fontSize: 24,
+          fontWeight: FontWeight.w700,
+          color: Colors.white,
+        ),
+        // Titles
         titleLarge: TextStyle(
           fontFamily: 'Montserrat',
           fontSize: 22,
           fontWeight: FontWeight.w700,
           color: Colors.white,
         ),
+        titleMedium: TextStyle(
+          fontFamily: 'Montserrat',
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
+          color: Colors.white,
+        ),
+        titleSmall: TextStyle(
+          fontFamily: 'Montserrat',
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+          color: Colors.white,
+        ),
+        // Body
         bodyLarge: TextStyle(
           fontFamily: 'Inter',
           fontSize: 16,
@@ -367,6 +435,53 @@ class AppTheme {
           fontWeight: FontWeight.w400,
           color: Colors.white,
         ),
+        bodySmall: TextStyle(
+          fontFamily: 'Inter',
+          fontSize: 14,
+          fontWeight: FontWeight.w400,
+          color: AppColors.grey400,
+        ),
+        // Labels
+        labelLarge: TextStyle(
+          fontFamily: 'Inter',
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+          color: Colors.white,
+        ),
+        labelMedium: TextStyle(
+          fontFamily: 'Inter',
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+          color: AppColors.grey400,
+        ),
+        labelSmall: TextStyle(
+          fontFamily: 'Inter',
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+          color: AppColors.grey400,
+        ),
+      ),
+      chipTheme: ChipThemeData(
+        backgroundColor: AppColors.grey800,
+        labelStyle: const TextStyle(
+          fontFamily: 'Inter',
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+          color: Colors.white,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(999),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: AppColors.grey800,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide.none,
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
     );
   }

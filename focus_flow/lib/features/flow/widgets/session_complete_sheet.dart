@@ -3,15 +3,22 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_icon.dart';
 import '../../../data/models/enums.dart';
+import '../../../data/models/flow_session.dart';
+import '../../../data/models/note.dart';
+import '../../../providers/providers.dart';
 
 class SessionCompleteSheet extends ConsumerStatefulWidget {
   final SessionType sessionType;
   final int durationMinutes;
+  final String? taskTitle;
+  final String? reflection;
 
   const SessionCompleteSheet({
     super.key,
     required this.sessionType,
     required this.durationMinutes,
+    this.taskTitle,
+    this.reflection,
   });
 
   @override
@@ -20,6 +27,15 @@ class SessionCompleteSheet extends ConsumerStatefulWidget {
 
 class _SessionCompleteSheetState extends ConsumerState<SessionCompleteSheet> {
   final _reflectionController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    // Pre-fill with existing reflection if available
+    if (widget.reflection != null) {
+      _reflectionController.text = widget.reflection!;
+    }
+  }
 
   @override
   void dispose() {
@@ -53,6 +69,19 @@ class _SessionCompleteSheetState extends ConsumerState<SessionCompleteSheet> {
           ),
           const SizedBox(height: 16),
 
+          // Task title if available
+          if (widget.taskTitle != null) ...[
+            Text(
+              '"${widget.taskTitle}" complete!',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: AppColors.teal,
+                fontWeight: FontWeight.w500,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+          ],
+
           Text(
             'Session Complete!',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
@@ -63,8 +92,8 @@ class _SessionCompleteSheetState extends ConsumerState<SessionCompleteSheet> {
 
           Text(
             '${widget.durationMinutes} minutes of ${_getSessionLabel()}',
-            style: TextStyle(
-              color: Colors.grey.shade600,
+            style: const TextStyle(
+              color: AppColors.grey600,
               fontSize: 16,
             ),
           ),
@@ -134,14 +163,51 @@ class _SessionCompleteSheetState extends ConsumerState<SessionCompleteSheet> {
     }
   }
 
-  void _saveSession() {
-    // The session is already saved in the flow provider's stop() method
-    Navigator.pop(context);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Session saved!'),
-        backgroundColor: AppColors.success,
-      ),
-    );
+  Future<void> _saveSession() async {
+    final reflection = _reflectionController.text.trim();
+    final sessionRepo = await ref.read(sessionRepositoryProvider.future);
+    final sessions = sessionRepo.getAll();
+
+    if (sessions.isNotEmpty) {
+      // Get the most recently completed session and add reflection
+      sessions.sort((a, b) => (b.completedAt ?? DateTime.now())
+          .compareTo(a.completedAt ?? DateTime.now()));
+      final recentSession = sessions.first;
+      recentSession.reflection = reflection;
+      await sessionRepo.save(recentSession);
+
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Session saved with reflection! 🎉'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
+    } else if (reflection.isNotEmpty) {
+      // No session found, but user entered a reflection - save as note
+      final noteRepo = await ref.read(noteRepositoryProvider.future);
+      final note = Note.create(
+        content: 'Session reflection: $reflection',
+        tags: ['reflection'],
+      );
+      await noteRepo.save(note);
+
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Reflection saved as a note 📝'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
+    } else {
+      // No session and no reflection - just close
+      if (mounted) {
+        Navigator.pop(context);
+      }
+    }
   }
 }

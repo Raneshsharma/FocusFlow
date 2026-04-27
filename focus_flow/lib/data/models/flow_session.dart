@@ -38,6 +38,7 @@ extension MoodTagExtension on MoodTag {
 class FlowSession {
   String id;
   String? taskId;
+  String? taskTitle; // Denormalized task title for display after session
   SessionType type;
   DateTime? startedAt;
   int durationSeconds;
@@ -49,6 +50,7 @@ class FlowSession {
   FlowSession({
     required this.id,
     this.taskId,
+    this.taskTitle,
     this.type = SessionType.open,
     this.startedAt,
     this.durationSeconds = 0,
@@ -60,6 +62,7 @@ class FlowSession {
 
   FlowSession.create({
     this.taskId,
+    this.taskTitle,
     this.type = SessionType.open,
     this.startedAt,
     this.durationSeconds = 0,
@@ -72,6 +75,7 @@ class FlowSession {
   Map<String, dynamic> toJson() => {
     'id': id,
     'taskId': taskId,
+    'taskTitle': taskTitle,
     'type': type.index,
     'startedAt': startedAt?.toIso8601String(),
     'durationSeconds': durationSeconds,
@@ -84,6 +88,7 @@ class FlowSession {
   factory FlowSession.fromJson(Map<String, dynamic> json) => FlowSession(
     id: json['id'],
     taskId: json['taskId'],
+    taskTitle: json['taskTitle'],
     type: SessionType.values[json['type'] ?? 0],
     startedAt: json['startedAt'] != null ? DateTime.parse(json['startedAt']) : null,
     durationSeconds: json['durationSeconds'] ?? 0,

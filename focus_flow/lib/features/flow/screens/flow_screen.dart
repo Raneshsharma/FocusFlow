@@ -3,10 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_icon.dart';
 import '../../../data/models/enums.dart';
+import '../../../data/models/flow_session.dart';
+import '../../../data/models/task.dart';
 import '../../../providers/flow_provider.dart';
 import '../../../providers/task_provider.dart';
 import '../widgets/timer_display.dart';
 import '../widgets/session_complete_sheet.dart';
+import '../widgets/dynamic_motivator.dart';
 
 class FlowScreen extends ConsumerWidget {
   const FlowScreen({super.key});
@@ -33,7 +36,7 @@ class FlowScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildIdleState(BuildContext context, WidgetRef ref, List tasks) {
+  Widget _buildIdleState(BuildContext context, WidgetRef ref, List<Task> tasks) {
     return Column(
       children: [
         // Header
@@ -126,6 +129,10 @@ class FlowScreen extends ConsumerWidget {
                     color: AppColors.grey500,
                   ),
                 ),
+
+                // Dynamic motivator
+                const SizedBox(height: 16),
+                const DynamicMotivator(),
                 const SizedBox(height: 40),
 
                 // Quick start options
@@ -144,7 +151,7 @@ class FlowScreen extends ConsumerWidget {
                       child: _QuickStartCard(
                         icon: '🍅',
                         label: 'Pomodoro',
-                        color: const Color(0xFFEF4444),
+                        color: AppColors.sessionPomodoro,
                         onTap: () => _startPomodoroSession(ref),
                       ),
                     ),
@@ -153,7 +160,7 @@ class FlowScreen extends ConsumerWidget {
                       child: _QuickStartCard(
                         icon: '🧠',
                         label: 'Deep Work',
-                        color: const Color(0xFFEC4899),
+                        color: AppColors.sessionDeep,
                         onTap: () => _startDeepWorkSession(ref),
                       ),
                     ),
@@ -311,7 +318,7 @@ class FlowScreen extends ConsumerWidget {
                         ],
                       ),
                       child: AppIcon(
-                        AppIcons.playCircle,
+                        sessionState.isRunning ? AppIcons.pause : AppIcons.play,
                         color: Colors.white,
                         size: 32,
                       ),
@@ -323,9 +330,9 @@ class FlowScreen extends ConsumerWidget {
                     onTap: () async {
                       final shouldSave = await _showStopConfirmation(context);
                       if (shouldSave == true) {
-                        await ref.read(flowSessionProvider.notifier).stop();
-                        if (context.mounted) {
-                          _showSessionComplete(context, ref, sessionState);
+                        final savedSession = await ref.read(flowSessionProvider.notifier).stop();
+                        if (context.mounted && savedSession != null) {
+                          _showSessionComplete(context, ref, savedSession);
                         }
                       }
                     },
@@ -419,14 +426,16 @@ class FlowScreen extends ConsumerWidget {
     );
   }
 
-  void _showSessionComplete(BuildContext context, WidgetRef ref, FlowSessionState state) {
+  void _showSessionComplete(BuildContext context, WidgetRef ref, FlowSession session) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => SessionCompleteSheet(
-        sessionType: state.sessionType,
-        durationMinutes: state.elapsedSeconds ~/ 60,
+        sessionType: session.type,
+        durationMinutes: session.durationSeconds ~/ 60,
+        taskTitle: session.taskTitle,
+        reflection: session.reflection,
       ),
     );
   }

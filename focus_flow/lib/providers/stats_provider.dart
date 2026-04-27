@@ -1,8 +1,17 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/models/daily_stats.dart';
-import '../core/utils/streak_calculator.dart';
+import '../core/utils/streak_calculator.dart' as calculator;
+import '../services/streak_service.dart';
 import 'providers.dart';
-import 'task_provider.dart';
+
+// Streak service provider
+final streakServiceProvider = Provider((ref) => StreakService());
+
+// Enhanced streak provider using StreakService
+final enhancedStreakProvider = FutureProvider<StreakResult>((ref) async {
+  final service = ref.read(streakServiceProvider);
+  return service.checkStreakStatus();
+});
 
 // Simple state provider for today's stats
 final todayStatsProvider = AsyncNotifierProvider<TodayStatsNotifier, DailyStats?>(() {
@@ -61,15 +70,15 @@ String _formatDate(DateTime date) {
   return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 }
 
-final streakProvider = FutureProvider<StreakData>((ref) async {
+final streakProvider = FutureProvider<calculator.StreakResult>((ref) async {
   final repoAsync = ref.watch(statsRepositoryProvider);
   return repoAsync.when(
     data: (repo) {
       final dates = repo.getActiveDates();
-      return StreakCalculator.calculate(dates);
+      return calculator.StreakCalculator.calculate(dates);
     },
-    loading: () => StreakData(current: 0, longest: 0, totalDays: 0),
-    error: (_, __) => StreakData(current: 0, longest: 0, totalDays: 0),
+    loading: () => calculator.StreakResult(current: 0, longest: 0, totalDays: 0),
+    error: (_, __) => calculator.StreakResult(current: 0, longest: 0, totalDays: 0),
   );
 });
 

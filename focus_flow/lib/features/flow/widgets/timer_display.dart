@@ -36,8 +36,8 @@ class TimerDisplay extends StatelessWidget {
             child: CircularProgressIndicator(
               value: 1,
               strokeWidth: 12,
-              backgroundColor: Colors.grey.shade200,
-              valueColor: AlwaysStoppedAnimation(Colors.grey.shade200),
+              backgroundColor: AppColors.grey200,
+              valueColor: const AlwaysStoppedAnimation(AppColors.grey200),
             ),
           ),
           // Progress circle

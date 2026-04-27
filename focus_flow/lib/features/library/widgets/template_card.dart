@@ -119,20 +119,20 @@ class TemplateCard extends StatelessWidget {
                 '$taskCount task${taskCount == 1 ? '' : 's'}',
                 style: TextStyle(
                   fontSize: 12,
-                  color: Colors.grey.shade600,
+                  color: AppColors.grey600,
                 ),
               ),
               if (bestTime != null) ...[
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    AppIcon(AppIcons.schedule, size: 10, color: Colors.grey.shade500),
+                    AppIcon(AppIcons.schedule, size: 10, color: AppColors.grey500),
                     const SizedBox(width: 4),
                     Text(
                       _formatTimeOfDay(bestTime!),
                       style: TextStyle(
                         fontSize: 10,
-                        color: Colors.grey.shade500,
+                        color: AppColors.grey500,
                       ),
                     ),
                   ],

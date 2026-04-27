@@ -1,7 +1,7 @@
 class StreakCalculator {
-  static StreakData calculate(List<DateTime> activeDates) {
+  static StreakResult calculate(List<DateTime> activeDates) {
     if (activeDates.isEmpty) {
-      return StreakData(current: 0, longest: 0, totalDays: activeDates.length);
+      return StreakResult(current: 0, longest: 0, totalDays: activeDates.length);
     }
 
     // Sort dates descending
@@ -66,7 +66,7 @@ class StreakCalculator {
     }
     longestStreak = tempStreak > longestStreak ? tempStreak : longestStreak;
 
-    return StreakData(
+    return StreakResult(
       current: currentStreak,
       longest: longestStreak > currentStreak ? longestStreak : currentStreak,
       totalDays: uniqueDays.length,
@@ -74,12 +74,13 @@ class StreakCalculator {
   }
 }
 
-class StreakData {
+// Internal class for streak calculation results
+class StreakResult {
   final int current;
   final int longest;
   final int totalDays;
 
-  StreakData({
+  StreakResult({
     required this.current,
     required this.longest,
     required this.totalDays,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_icon.dart';
 
 class MicroBreakCard extends StatelessWidget {
@@ -17,22 +18,22 @@ class MicroBreakCard extends StatelessWidget {
     this.onTap,
   });
 
-  String _getIconPath() {
+  String _getEmoji() {
     switch (icon) {
       case 'coffee':
-        return 'rest/micro_coffee';
+        return '☕';
       case 'walk':
-        return 'rest/micro_walk';
+        return '🚶';
       case 'visibility_off':
-        return 'rest/micro_look_away';
+        return '👀';
       case 'accessibility':
-        return 'rest/micro_stretch';
+        return '🧘';
       case 'water_drop':
-        return 'rest/micro_hydrate';
+        return '💧';
       case 'spa':
-        return 'rest/micro_relax';
+        return '🌿';
       default:
-        return 'rest/micro_relax';
+        return '✨';
     }
   }
 
@@ -49,15 +50,17 @@ class MicroBreakCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                padding: const EdgeInsets.all(10),
+                width: 48,
+                height: 48,
                 decoration: BoxDecoration(
                   color: color.withOpacity(0.1),
                   shape: BoxShape.circle,
                 ),
-                child: AppIcon(
-                  _getIconPath(),
-                  color: color,
-                  size: 32,
+                child: Center(
+                  child: Text(
+                    _getEmoji(),
+                    style: const TextStyle(fontSize: 24),
+                  ),
                 ),
               ),
               const SizedBox(height: 8),
@@ -76,7 +79,7 @@ class MicroBreakCard extends StatelessWidget {
                 duration,
                 style: TextStyle(
                   fontSize: 12,
-                  color: Colors.grey.shade600,
+                  color: AppColors.grey600,
                 ),
               ),
             ],

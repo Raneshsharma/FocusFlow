@@ -16,7 +16,7 @@ class ThemePreviewCard extends StatelessWidget {
     final bg = isDarkMode ? AppColors.charcoal : AppColors.white;
     final surface = isDarkMode ? AppColors.deepSlate : AppColors.surface;
     final textColor = isDarkMode ? Colors.white : AppColors.textPrimary;
-    final secondaryText = isDarkMode ? Colors.grey.shade400 : AppColors.textSecondary;
+    final secondaryText = isDarkMode ? AppColors.grey400 : AppColors.textSecondary;
 
     return Container(
       height: 120,

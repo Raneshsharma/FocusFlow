@@ -24,7 +24,7 @@ class TaskCard extends ConsumerWidget {
       case EnergyLevel.low:
         return AppColors.energyLow;
       case EnergyLevel.none:
-        return Colors.grey;
+        return AppColors.grey500;
     }
   }
 
@@ -77,7 +77,6 @@ class TaskCard extends ConsumerWidget {
                   if (!task.completed) {
                     final tasksNotifier = ref.read(tasksProvider.notifier);
                     await tasksNotifier.completeTask(task.id);
-                    ref.read(todayStatsProvider.notifier).incrementTasks();
                   }
                 },
                 child: Container(
@@ -86,7 +85,7 @@ class TaskCard extends ConsumerWidget {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: task.completed ? AppColors.success : Colors.grey,
+                      color: task.completed ? AppColors.success : AppColors.grey500,
                       width: 2,
                     ),
                     color: task.completed ? AppColors.success : Colors.transparent,
@@ -109,7 +108,7 @@ class TaskCard extends ConsumerWidget {
                         fontSize: 16,
                         fontWeight: FontWeight.w500,
                         decoration: task.completed ? TextDecoration.lineThrough : null,
-                        color: task.completed ? Colors.grey : null,
+                        color: task.completed ? AppColors.grey500 : null,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -136,9 +135,9 @@ class TaskCard extends ConsumerWidget {
                           const SizedBox(width: 8),
                           Text(
                             '#${task.tags.first}',
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontSize: 12,
-                              color: Colors.grey.shade600,
+                              color: AppColors.grey600,
                             ),
                           ),
                         ],
@@ -185,7 +184,7 @@ class TaskCard extends ConsumerWidget {
                         children: [
                           AppIcon(
                             task.isFavorite ? AppIcons.starFilled : AppIcons.starOutline,
-                            color: task.isFavorite ? AppColors.amber : Colors.grey,
+                            color: task.isFavorite ? AppColors.amber : AppColors.grey500,
                             size: 18,
                           ),
                           const SizedBox(width: 12),

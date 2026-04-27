@@ -49,6 +49,11 @@ class AppSettingsNotifier extends AsyncNotifier<AppSettings> {
   Future<void> clearAllData() async {
     await _save(AppSettings());
   }
+
+  Future<void> setOnboardingCompleted(bool value) async {
+    final current = state.valueOrNull ?? AppSettings();
+    await _save(current.copyWith(hasCompletedOnboarding: value));
+  }
 }
 
 final darkModeProvider = Provider<bool>((ref) {

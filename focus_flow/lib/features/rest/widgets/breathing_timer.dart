@@ -56,7 +56,7 @@ class _BreathingTimerSheetState extends ConsumerState<BreathingTimerSheet>
             width: 40,
             height: 4,
             decoration: BoxDecoration(
-              color: Colors.grey.shade300,
+              color: AppColors.grey300,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -75,7 +75,7 @@ class _BreathingTimerSheetState extends ConsumerState<BreathingTimerSheet>
                   ),
                 ),
                 IconButton(
-                  icon: AppIcon(AppIcons.close, size: 24),
+                  icon: const Icon(Icons.close, size: 24),
                   onPressed: () => Navigator.pop(context),
                 ),
               ],
@@ -142,8 +142,8 @@ class _BreathingTimerSheetState extends ConsumerState<BreathingTimerSheet>
           const Spacer(),
 
           // Breathing circle animation
-          AnimatedBuilder(
-            animation: _breathAnimation,
+          ListenableBuilder(
+            listenable: _breathAnimation,
             builder: (context, child) {
               double scale = _breathAnimation.value;
               // Adjust scale based on phase
@@ -253,8 +253,8 @@ class _BreathingTimerSheetState extends ConsumerState<BreathingTimerSheet>
     _breathController.reset();
   }
 
-  void _runBreathingCycle() async {
-    if (!_isRunning) return;
+  Future<void> _runBreathingCycle() async {
+    if (!mounted || !_isRunning) return;
 
     switch (_selectedPattern) {
       case BreathingPattern.box:
@@ -270,68 +270,53 @@ class _BreathingTimerSheetState extends ConsumerState<BreathingTimerSheet>
   }
 
   Future<void> _runBoxBreathing() async {
+    if (!mounted || !_isRunning) return;
     // Box breathing: 4s inhale, 4s hold, 4s exhale, 4s hold = 16s total
-    // Inhale
-    setState(() => _currentPhase = 'Inhale');
+    if (mounted) setState(() => _currentPhase = 'Inhale');
     _breathController.duration = const Duration(seconds: 4);
     _breathController.forward(from: 0);
     await Future.delayed(const Duration(seconds: 4));
 
-    if (!_isRunning) return;
-
-    // Hold
-    setState(() => _currentPhase = 'Hold');
+    if (!mounted || !_isRunning) return;
+    if (mounted) setState(() => _currentPhase = 'Hold');
     await Future.delayed(const Duration(seconds: 4));
 
-    if (!_isRunning) return;
-
-    // Exhale
-    setState(() => _currentPhase = 'Exhale');
+    if (!mounted || !_isRunning) return;
+    if (mounted) setState(() => _currentPhase = 'Exhale');
     _breathController.duration = const Duration(seconds: 4);
     _breathController.reverse(from: 1);
     await Future.delayed(const Duration(seconds: 4));
 
-    if (!_isRunning) return;
-
-    // Hold
-    setState(() => _currentPhase = 'Hold');
+    if (!mounted || !_isRunning) return;
+    if (mounted) setState(() => _currentPhase = 'Hold');
     await Future.delayed(const Duration(seconds: 4));
 
-    // Update elapsed (16 seconds per cycle)
-    _updateElapsed(16);
+    if (mounted) _updateElapsed(16);
   }
 
   Future<void> _run478Breathing() async {
+    if (!mounted || !_isRunning) return;
     // 4-7-8: 4s inhale, 7s hold, 8s exhale = 19s total
-
-    // Inhale
-    setState(() => _currentPhase = 'Inhale');
+    if (mounted) setState(() => _currentPhase = 'Inhale');
     _breathController.duration = const Duration(seconds: 4);
     _breathController.forward(from: 0);
     await Future.delayed(const Duration(seconds: 4));
 
-    if (!_isRunning) return;
-
-    // Hold 7s
-    setState(() => _currentPhase = 'Hold');
+    if (!mounted || !_isRunning) return;
+    if (mounted) setState(() => _currentPhase = 'Hold');
     await Future.delayed(const Duration(seconds: 7));
 
-    if (!_isRunning) return;
-
-    // Exhale 8s
-    setState(() => _currentPhase = 'Exhale');
+    if (!mounted || !_isRunning) return;
+    if (mounted) setState(() => _currentPhase = 'Exhale');
     _breathController.duration = const Duration(seconds: 8);
     _breathController.forward(from: 0);
     await Future.delayed(const Duration(seconds: 8));
 
-    // Update elapsed (19 seconds per cycle)
-    _updateElapsed(19);
+    if (mounted) _updateElapsed(19);
   }
 
   Future<void> _runPhysiologicalSigh() async {
-    // Physiological sigh: 3s first inhale, 3s second inhale (double), 6s exhale = 12s total
-
-    // First inhale
+    if (!mounted || !_isRunning) return;
     setState(() => _currentPhase = 'Inhale 1');
     _breathController.duration = const Duration(seconds: 3);
     _breathController.forward(from: 0);
@@ -347,16 +332,16 @@ class _BreathingTimerSheetState extends ConsumerState<BreathingTimerSheet>
     if (!_isRunning) return;
 
     // Long exhale
-    setState(() => _currentPhase = 'Exhale');
+    if (mounted) setState(() => _currentPhase = 'Exhale');
     _breathController.duration = const Duration(seconds: 6);
     _breathController.forward(from: 0);
     await Future.delayed(const Duration(seconds: 6));
 
-    // Update elapsed (12 seconds per cycle)
-    _updateElapsed(12);
+    if (mounted) _updateElapsed(12);
   }
 
   void _updateElapsed(int seconds) {
+    if (!mounted) return;
     setState(() {
       _elapsedSeconds += seconds;
       if (_elapsedSeconds >= _selectedMinutes * 60) {
@@ -366,7 +351,7 @@ class _BreathingTimerSheetState extends ConsumerState<BreathingTimerSheet>
     });
 
     // Continue cycling if still running
-    if (_isRunning) {
+    if (_isRunning && mounted) {
       _runBreathingCycle();
     }
   }

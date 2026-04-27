@@ -6,11 +6,13 @@ import '../data/repositories/template_repository.dart';
 import '../data/repositories/resource_repository.dart';
 import '../data/repositories/settings_repository.dart';
 import '../data/repositories/note_repository.dart';
+import '../data/repositories/wind_down_repository.dart';
 
 export 'task_provider.dart' show tasksProvider, TasksNotifier;
 export 'flow_provider.dart' show flowSessionProvider, FlowSessionNotifier;
 export 'stats_provider.dart' show todayStatsProvider, getTodayStatsProvider;
 export 'settings_provider.dart' show appSettingsProvider, AppSettingsNotifier, darkModeProvider, soundEnabledProvider, pomodoroSettingsProvider, notificationSettingsProvider, displaySettingsProvider, appThemeModeProvider;
+export 'gamification_provider.dart' show gamificationProvider, currentLevelProvider, xpProgressProvider, todayXpProvider;
 
 // Repository providers (initialized async)
 final taskRepositoryProvider = FutureProvider<TaskRepository>((ref) async {
@@ -39,4 +41,8 @@ final settingsRepositoryProvider = FutureProvider<SettingsRepository>((ref) asyn
 
 final noteRepositoryProvider = FutureProvider<NoteRepository>((ref) async {
   return NoteRepository.create();
+});
+
+final windDownRepositoryProvider = FutureProvider<WindDownRepository>((ref) async {
+  return WindDownRepository.create();
 });

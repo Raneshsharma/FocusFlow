@@ -42,7 +42,7 @@ class SettingsHeader extends StatelessWidget {
             style: TextStyle(
               fontFamily: 'Inter',
               fontSize: 13,
-              color: Colors.grey.shade500,
+              color: AppColors.grey500,
             ),
           ),
           const SizedBox(height: 8),

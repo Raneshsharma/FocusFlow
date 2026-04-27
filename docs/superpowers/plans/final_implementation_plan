@@ -1,0 +1,787 @@
+Overview
+This document consolidates all unimplemented features from the five original plan documents. Features are organized by their source plan category. Each entry specifies the file path(s) to create or modify, the implementation approach, the logic and UI behavior, and any dependencies or edge cases.
+
+PART 1: Critical Gaps + TODO Fixes
+Task 1: Focus Screen — TaskItem Widget & Swipe Gestures
+Files to create:
+
+focus_flow/lib/features/focus/widgets/task_item.dart
+focus_flow/lib/features/focus/widgets/task_detail_sheet.dart
+Files to modify:
+
+focus_flow/lib/features/focus/screens/focus_screen.dart
+focus_flow/lib/features/focus/widgets/time_zone_card.dart
+focus_flow/lib/providers/task_provider.dart
+Implementation approach:
+Create a reusable TaskItem widget that wraps each task row in a Dismissible widget. Swipe right → green background with checkmark icon → complete task. Swipe left → red background with trash icon → delete task with confirmation. The widget should display: checkbox (tappable), task title (bold if priority), energy chip, zone chip, favorite star toggle, and a play button to start a session linked to that task.
+
+Logic:
+
+On swipe-complete: call taskProvider.markComplete(taskId) and trigger taskCompletionCelebration (to be built in Part 6).
+On swipe-delete: show AlertDialog confirmation → call taskProvider.deleteTask(taskId).
+Favorite toggle: call taskProvider.toggleFavorite(taskId).
+Start session: call flowSessionProvider.startSession(type, taskId: task.id) then navigate to /flow.
+Task detail sheet: tap the task title to open a bottom sheet showing full notes, linked resources, session history for that task.
+UI behavior:
+
+Swipe threshold: 0.3 of item width.
+Dismiss direction: DismissDirection.horizontal.
+Background icons animate in via flutter_animate.
+Completed tasks animate out with a 300ms slide + fade.
+
+Task 2: Archive — Brag Doc Clipboard Export
+Files to modify:
+
+focus_flow/lib/features/library/screens/library_screen.dart — _buildBragDocSection() around line 1510
+Implementation approach:
+Add Clipboard.setData(ClipboardData(text: buffer.toString())) to the export button's onPressed callback. Use the existing StringBuffer that builds the formatted text. After copying, show a ScaffoldMessenger snackbar: "Brag doc copied! Paste it anywhere."
+
+Logic:
+The existing _buildBragDocSection() already constructs a StringBuffer with formatted entries grouped by month. The onPressed on the export IconButton just needs one line added before or after the share intent.
+
+UI behavior:
+
+Snackbar appears for 2 seconds at the bottom.
+IconButton is already present in the Brag Doc card header — no UI changes needed.
+
+Task 3: Resource — "Read Later" Persistence
+Files to modify:
+
+focus_flow/lib/features/library/screens/library_screen.dart — _showResourceDetail() around line 1794
+focus_flow/lib/providers/providers.dart — add resourceRepositoryProvider export if missing
+Implementation approach:
+In _showResourceDetail(), when the user taps the bookmark/save button, call resourceRepository.save(resource) to persist the "Read Later" state. If the resource is already saved, toggle it to unsaved.
+
+Logic:
+
+Read resourceRepositoryProvider from the widget's context.
+Check resource.isSaved — if false, save; if true, delete from repository.
+Update the icon from Icons.bookmark_border to Icons.bookmark on save.
+UI behavior:
+
+Icon animates on state change (scale bounce via flutter_animate).
+If the resource is already saved, show a snackbar "Removed from saved".
+
+Task 4: Voice Capture — Real Recording Implementation
+Files to modify:
+
+focus_flow/lib/features/library/widgets/voice_record_sheet.dart (existing shell)
+New dependencies:
+
+Add record: ^5.0.0 to pubspec.yaml
+Add permission_handler: ^11.0.0 to pubspec.yaml
+Implementation approach:
+Wire the existing _VoiceRecordSheet widget with the record package. Implement full audio recording lifecycle: permission request → start recording → display live waveform/timer (updates every 100ms) → auto-stop at 60 seconds → save audio file → create Note with linkedAudioPath.
+
+Logic:
+
+On sheet open: check await Permission.microphone.request().
+If granted, enable the record button; if denied, show a message linking to app settings.
+On record press: create Directory path in app documents, start AudioRecorder() with Encoder.aacLc.
+Display elapsed time counting up from 0, updating setState every 100ms.
+At 60 seconds, auto-call _stopRecording().
+On stop: get the file path, create Note(title: 'Voice Note', linkedAudioPath: path, tags: [NoteTags.remember]), save via noteRepositoryProvider.
+On discard: delete the temp file.
+UI behavior:
+
+Record button: large red circle, pulses while recording.
+Timer display: "00:45 / 01:00" format.
+Stop button appears during recording.
+On save: success animation, sheet closes, snackbar "Voice note saved".
+Edge cases:
+
+App backgrounded during recording: recording continues, auto-saves at 60s.
+Permission denied: show ListTile with "Open Settings" button.
+Storage full: catch PlatformException, show error snackbar.
+PART 2: Settings Revamp (Remaining Tasks)
+Task 5: Pomodoro — Long Break After 4 Rounds
+Files to modify:
+
+focus_flow/lib/providers/flow_provider.dart — _handlePomodoroRoundComplete() around line 138
+Implementation approach:
+Modify _handlePomodoroRoundComplete() to transition to pomodoroLongBreak (15 minutes per AppConstants.pomodoroLongBreak) after completing round 4, instead of calling pause().
+
+Logic:
+In the else branch (switching from break to work), after incrementing pomodoroRound:
+
+
+if (state.pomodoroRound > AppConstants.pomodoroRounds) {
+  // All rounds complete — show long break then end
+  _stopwatch.reset();
+  _stopwatch.start();
+  state = state.copyWith(
+    isBreak: true,
+    isLongBreak: true,  // Add this field to FlowSessionState
+    elapsedSeconds: 0,
+    currentPhaseElapsed: 0,
+  );
+} else {
+  // Normal short break
+  ...
+}
+When isLongBreak is true, remainingSeconds and progress getters use AppConstants.pomodoroLongBreak as the target. After the long break completes, call pause() and trigger session complete flow.
+
+New field on FlowSessionState:
+
+
+bool isLongBreak = false;
+Constants (verify in app_constants.dart):
+
+
+static const int pomodoroLongBreak = 15 * 60; // 15 minutes
+static const int pomodoroRounds = 4;
+Task 6: Flow Session — Task Title Denormalization
+Files to modify:
+
+focus_flow/lib/data/models/flow_session.dart
+focus_flow/lib/providers/flow_provider.dart — startSession() method
+focus_flow/lib/features/flow/widgets/session_complete_sheet.dart
+Implementation approach:
+Add a taskTitle: String? field to the FlowSession model. When startSession() is called with a taskId, look up the task and store its title in the session. Display the task title in SessionCompleteSheet header.
+
+Logic:
+
+
+// In FlowSession model
+class FlowSession {
+  String? taskId;
+  String? taskTitle;  // NEW FIELD
+  ...
+}
+In startSession():
+
+
+void startSession(SessionType type, {String? taskId}) {
+  ...
+  String? taskTitle;
+  if (taskId != null) {
+    final task = _ref.read(taskProvider).tasks.firstWhere(
+      (t) => t.id == taskId,
+      orElse: () => throw Exception('Task not found'),
+    );
+    taskTitle = task.title;
+  }
+  final session = FlowSession.create(
+    type: type,
+    taskId: taskId,
+    taskTitle: taskTitle,  // Pass through
+    startedAt: DateTime.now(),
+  );
+  ...
+}
+In SessionCompleteSheet:
+
+
+if (session.taskTitle != null)
+  Text('"${session.taskTitle}" complete!',
+    style: Theme.of(context).textTheme.titleMedium,
+  ),
+PART 3: Strategic Opportunities (Remaining Tasks)
+Task 7: Weekly Insights Screen
+Files to create:
+
+focus_flow/lib/features/library/screens/weekly_insights_screen.dart
+focus_flow/lib/features/library/widgets/streak_hero_card.dart
+focus_flow/lib/features/library/widgets/weekly_bar_chart.dart
+focus_flow/lib/features/library/widgets/adhd_insight_card.dart
+Files to modify:
+
+focus_flow/lib/core/router/app_router.dart — add /insights route
+focus_flow/lib/features/focus/screens/focus_screen.dart — add Insights button to header
+Implementation approach:
+Create a scrollable screen with four sections: (1) streak hero card with flame icon and current streak days, (2) weekly bar chart showing focus minutes per day, (3) ADHD insight card reading from EnergyInsightProvider, (4) pro tip card with rotating tips from a static list.
+
+Logic:
+
+Use StatsRepository to fetch last 7 days of focusMinutes via getDailyStats(start, end).
+Calculate streak from StreakService (built in Task 19).
+ADHD insights: read from energyInsightProvider which analyzes peak energy times from session history.
+Pro tips: static List<String> of 10 rotating tips, pick based on DateTime.now().day % tips.length.
+UI behavior:
+
+Streak card: large number with flame icon, "days" label, animated counter on entry.
+Bar chart: 7 vertical bars, today highlighted, tooltips on tap showing exact minutes.
+Pull-to-refresh to recalculate.
+"Share insights" button exports a text summary to clipboard.
+Dependencies: Requires fl_chart: ^0.65.0 for the bar chart.
+
+Task 8: Anytime Pool — Zone Reassignment via Long Press
+Files to modify:
+
+focus_flow/lib/features/focus/widgets/time_zone_card.dart — add to AnytimePool section
+focus_flow/lib/features/focus/screens/focus_screen.dart
+focus_flow/lib/providers/task_provider.dart — add updateTaskZone() method
+Implementation approach:
+Add a GestureDetector(onLongPress: () => _showZonePicker(task)) to each task item in the AnytimePool widget. The zone picker is a bottom sheet with four zone options (Morning, Afternoon, Evening, Anytime) each as a tappable card. On selection, call taskProvider.updateTaskZone(taskId, newZone).
+
+Logic:
+
+
+// In TaskProvider
+void updateTaskZone(String taskId, TimeZone newZone) {
+  final task = state.tasks.firstWhere((t) => t.id == taskId);
+  final updated = task.copyWith(zone: newZone);
+  state = state.copyWith(
+    tasks: state.tasks.map((t) => t.id == taskId ? updated : t).toList(),
+  );
+  _repository.save(updated);
+}
+UI behavior:
+
+Long press shows a BottomSheet with 2×2 grid of zone cards.
+Current zone is highlighted.
+Haptic feedback on long press.
+Task animates out of AnytimePool and into new zone section.
+Task 9: Notification Service
+Files to create:
+
+focus_flow/lib/services/notification_service.dart
+Files to modify:
+
+focus_flow/lib/providers/flow_provider.dart — wire into _handlePomodoroRoundComplete() and pause()
+focus_flow/lib/main.dart — initialize in main() before runApp()
+New dependency: flutter_local_notifications: ^17.0.0
+
+Implementation approach:
+Create a singleton NotificationService wrapping flutter_local_notifications. Initialize with app icon and request permissions. Expose methods: showSessionEndNotification(), showBreakEndNotification(), scheduleReEngagement().
+
+Logic:
+
+
+class NotificationService {
+  static final NotificationService _instance = NotificationService._internal();
+  factory NotificationService() => _instance;
+  
+  Future<void> initialize() async {
+    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const iosSettings = DarwinInitializationSettings(...);
+    await flutterLocalNotificationsPlugin.initialize(...);
+  }
+  
+  Future<void> showSessionEndNotification({
+    required String title,
+    required String body,
+  }) async {
+    await flutterLocalNotificationsPlugin.show(
+      0, title, body,
+      NotificationDetails(android: AndroidNotificationDetails(...)),
+    );
+  }
+  
+  Future<void> scheduleBreakEnd({required int seconds}) async {
+    // Use zonedSchedule for scheduled notifications
+  }
+}
+Wire into flow_provider.dart:
+
+When pomodoro work phase ends: notificationService.showSessionEndNotification(title: 'Work block done!', body: 'Time for a break')
+When break ends: notificationService.showBreakEndNotification()
+Platform config:
+
+Android: add RECEIVE_BOOT_COMPLETED permission for scheduled notifications.
+iOS: add UIBackgroundModes for remote notifications in Info.plist.
+Task 10: Onboarding — Energy Teaching Screen
+Files to create:
+
+focus_flow/lib/features/onboarding/screens/onboarding_energy_task_screen.dart
+Files to modify:
+
+focus_flow/lib/features/onboarding/screens/onboarding_flow.dart — insert as page 4
+focus_flow/lib/core/router/app_router.dart — no route change needed (it's part of the onboarding flow)
+Implementation approach:
+Create a fourth onboarding page after the Time Zones page. Shows three cards explaining the energy model: Quick Win (EnergyLevel.quick, "5-15 min tasks"), Marathon (EnergyLevel.deep, "25+ min focused work"), and Low Battery (EnergyLevel.low, "Tiny tasks, admin, inbox zero"). Each card has an icon and one-line description.
+
+Logic:
+
+No backend logic — purely educational.
+On "Got it" press, mark onboarding complete and navigate to home.
+Store onboardingCompleted: true in settings via appSettingsNotifier.
+UI behavior:
+
+Page indicator updates to show 4 dots.
+Cards animate in sequentially (stagger 100ms delay each).
+"Got it" button on bottom, primary purple style.
+PART 4: UX/Engagement Gaps
+Task 11: Dynamic Motivator
+Files to create:
+
+focus_flow/lib/features/flow/widgets/dynamic_motivator.dart
+Files to modify:
+
+focus_flow/lib/features/flow/screens/flow_screen.dart — replace static text at line 135
+Implementation approach:
+Create a DynamicMotivator widget that selects from 6 time-of-day-specific motivational messages and falls back to a session-completion-based message if tasks have been completed today.
+
+Logic:
+
+
+String _getMotivation() {
+  final hour = DateTime.now().hour;
+  if (hour < 10) return '☀️ Fresh morning — tackle your hardest task first!';
+  if (hour < 14) return '⚡ Peak hours — stay in the zone!';
+  if (hour < 17) return '🌤️ Afternoon push — keep the momentum!';
+  if (hour < 20) return '🌙 Evening wind-down — choose something light.';
+  return '🌛 Late night focus — one task at a time.';
+}
+After task completion (monitor taskProvider state changes), cycle to completion messages like "🎉 You crushed it!", "💪 Another one done!", "🔥 Keep going!"
+
+UI behavior:
+
+Fade-in animation on widget mount.
+Crossfade to completion message when a task is marked done (listen to taskProvider via ref.watch).
+Task 12: Achievement/Badge System
+Files to create:
+
+focus_flow/lib/data/models/achievement.dart
+focus_flow/lib/data/repositories/achievement_repository.dart
+focus_flow/lib/core/constants/achievements.dart
+focus_flow/lib/providers/achievement_provider.dart
+focus_flow/lib/features/library/widgets/achievement_badge.dart
+focus_flow/lib/features/library/widgets/achievement_toast.dart
+focus_flow/lib/features/library/screens/achievement_gallery_screen.dart
+Files to modify:
+
+focus_flow/lib/features/library/screens/library_screen.dart — add "Achievements" tab
+focus_flow/lib/providers/providers.dart — add achievement exports
+Implementation approach:
+Define 16 achievements across 4 tiers (Bronze/Silver/Gold/Platinum). Each has an AchievementDefinition with: id, title, description, icon, tier, and an isUnlocked() predicate function. Store unlocked achievements in Hive via AchievementRepository. Create AchievementProvider as a StateNotifier that checks unlock conditions after every session completion and task completion.
+
+Logic:
+
+
+// achievements.dart — the catalog
+class AchievementDefinition {
+  final String id;
+  final String title;
+  final String description;
+  final IconData icon;
+  final AchievementTier tier;
+  final bool Function(StatsRepository, TaskRepository) isUnlocked;
+}
+
+final achievementsCatalog = [
+  AchievementDefinition(
+    id: 'first_flow',
+    title: 'First Flow',
+    description: 'Complete your first focus session',
+    icon: Icons.play_arrow,
+    tier: AchievementTier.bronze,
+    isUnlocked: (stats, tasks) => stats.totalSessions >= 1,
+  ),
+  // ... 15 more
+];
+AchievementProvider:
+
+Watches flowSessionProvider for activeSession == null && wasRunning transition (session just completed).
+Watches taskProvider for tasks changes.
+After each change: iterate the catalog, call isUnlocked(), save newly unlocked to repository.
+Emit new achievements as state list.
+On new achievement: trigger AchievementToast overlay via overlayEntry.
+UI behavior:
+
+Toast: slides in from top, shows badge icon + title + description, auto-dismisses after 4 seconds, uses flutter_animate for entrance.
+Gallery: grid of badge icons, locked ones are greyscale with lock overlay.
+Badge widget: circular icon with colored border matching tier.
+Task 13: Adaptive Rest Card
+Files to create:
+
+focus_flow/lib/features/rest/widgets/adaptive_break_card.dart
+Files to modify:
+
+focus_flow/lib/features/rest/screens/rest_screen.dart — replace static greeting
+Implementation approach:
+Query SessionRepository for the last 5 sessions to determine context. Generate a context-aware break suggestion from a predefined list.
+
+Logic:
+
+
+String _getBreakSuggestion(List<FlowSession> recentSessions) {
+  if (recentSessions.isEmpty) return 'Take a walk outside — fresh air resets your brain.';
+  final avgDuration = recentSessions.map((s) => s.durationSeconds).reduce((a,b) => a+b) / recentSessions.length;
+  if (avgDuration > 20 * 60) return 'You\'ve been deep in flow — try 5 minutes of stretches.';
+  if (recentSessions.any((s) => s.type == SessionType.pomodoro)) {
+    return 'Pomodoro mode detected — a short walk would help you reset.';
+  }
+  return 'You\'ve been focused — try the 4-7-8 breathing exercise.';
+}
+Also suggest a random break activity from: ["stretch arms and neck", "look out a window for 2 min", "make a quick tea/coffee", "do 5 jumping jacks", "text someone you haven't talked to today"].
+
+UI behavior:
+
+Card with gradient purple background, activity icon, suggestion text.
+Refresh icon button to get a new suggestion.
+Tap to open the full rest screen with that activity preselected.
+Task 14: Energy Trend Feedback
+Files to create:
+
+focus_flow/lib/data/models/energy_insight.dart
+focus_flow/lib/providers/energy_insight_provider.dart
+Files to modify:
+
+focus_flow/lib/features/library/screens/weekly_insights_screen.dart — integrate EnergyInsightCard
+Implementation approach:
+Analyze session history to find patterns in energy levels and peak productivity times. Generate insights as structured EnergyInsight objects.
+
+Logic:
+
+
+class EnergyInsight {
+  final String title;
+  final String body;
+  final InsightType type; // peak_time, energy_pattern, tip
+
+  static List<EnergyInsight> generate(List<FlowSession> sessions) {
+    final insights = <EnergyInsight>[];
+    // Analyze: what time of day gets the longest sessions?
+    final byHour = groupBy(sessions, (s) => s.startedAt.hour);
+    final peakHour = byHour.entries
+        .map((e) => MapEntry(e.key, e.value.length))
+        .reduce((a,b) => a.value > b.value ? a : b).key;
+    insights.add(EnergyInsight(
+      title: '⚡ Your peak hour',
+      body: 'You\'re most productive around ${_hourLabel(peakHour)}.',
+      type: InsightType.peakTime,
+    ));
+    // More insights...
+    return insights;
+  }
+}
+Expose as energyInsightProvider = FutureProvider<List<EnergyInsight>> that reads session history and computes insights on demand.
+
+PART 5: Streak Service + Re-Engagement
+Task 15: Streak Service
+Files to create:
+
+focus_flow/lib/services/streak_service.dart
+Files to modify:
+
+focus_flow/lib/providers/stats_provider.dart — integrate streak checking
+focus_flow/lib/main.dart — call streakService.checkStreakStatus() on startup
+Implementation approach:
+Implement streak logic with a 1-day grace period. A streak is maintained if the user completes at least one session today OR completed one yesterday (grace day). If both days are missed, the streak resets.
+
+Logic:
+
+
+class StreakService {
+  Future<StreakData> checkStreakStatus() async {
+    final statsRepo = await statsRepositoryProvider.future;
+    final today = DateTime.now();
+    final yesterday = today.subtract(const Duration(days: 1));
+    
+    final hasToday = await statsRepo.getSessionsForDate(today).then(
+      (s) => s.isNotEmpty
+    );
+    final hasYesterday = await statsRepo.getSessionsForDate(yesterday).then(
+      (s) => s.isNotEmpty
+    );
+    
+    if (hasToday) {
+      // Streak continues or increments
+      return StreakData(currentStreak: currentStreak + 1, lastActiveDate: today);
+    } else if (hasYesterday) {
+      // Grace day — streak frozen, not lost
+      return StreakData(currentStreak: currentStreak, lastActiveDate: yesterday, isGraceDay: true);
+    } else {
+      // Streak lost
+      return StreakData(currentStreak: 0, lastActiveDate: null);
+    }
+  }
+}
+Task 16: Welcome Back Sheet
+Files to create:
+
+focus_flow/lib/features/library/widgets/welcome_back_sheet.dart
+Files to modify:
+
+focus_flow/lib/main.dart — show on startup if returning user && streak broken
+Implementation approach:
+On app startup, check streakService.checkStreakStatus(). If isGraceDay == true and user hasn't used the app today, show WelcomeBackSheet via showModalBottomSheet. If streak is 0 and was previously > 0, show a "Streak lost" variant with encouragement to start fresh.
+
+Logic:
+
+Read current streak from streakProvider.
+If returning after 1+ days absence: show days-since message.
+Show streak count (0 or current).
+Provide two CTAs: "Start Fresh" (opens focus screen) and "View Insights" (opens weekly insights).
+Sheet auto-dismisses on any navigation.
+UI behavior:
+
+Large greeting based on time of day: "Good morning", "Hey!", etc.
+Streak display with flame icon.
+Days absent message: "You were away for X days — no worries, let's get back in the zone."
+Encouraging subtext: "Every day is a fresh start."
+PART 6: Gamification System
+Task 17: Gamification Provider + Data Models
+Files to create:
+
+focus_flow/lib/data/models/daily_progress.dart
+focus_flow/lib/data/models/streak_data.dart
+focus_flow/lib/data/models/achievement.dart (if not created in Task 12)
+focus_flow/lib/providers/gamification_provider.dart
+Files to modify:
+
+focus_flow/lib/main.dart — register Hive adapters for new models
+focus_flow/lib/core/constants/app_constants.dart — XP values per action
+Implementation approach:
+Create three Hive-backed data models and a central GamificationNotifier that orchestrates XP earning, level progression, and streak tracking.
+
+Models:
+
+
+// daily_progress.dart
+class DailyProgress {
+  String id; // date key YYYY-MM-DD
+  int xpEarned;
+  int tasksCompleted;
+  int sessionsCompleted;
+  List<String> achievementsUnlocked;
+  
+  static String dateKey(DateTime d) => '${d.year}-${d.month.toString().padLeft(2,'0')}-${d.day.toString().padLeft(2,'0')}';
+}
+
+// streak_data.dart  
+class StreakData {
+  int currentStreak;
+  int longestStreak;
+  DateTime? lastActiveDate;
+  bool isGraceDay;
+}
+
+// achievement.dart
+enum AchievementTier { bronze, silver, gold, platinum }
+class Achievement {
+  String definitionId;
+  DateTime unlockedAt;
+}
+GamificationNotifier logic:
+
+addXp(int amount): update DailyProgress, check level thresholds.
+Level formula: level = (xp / 100).floor() + 1.
+Every 100 XP = level up. Each level up = 1 AchievementDefinition unlocked (e.g., level 5 = "Rising Star" badge).
+After each task completion: addXp(AppConstants.xpPerTask).
+After each session: addXp(AppConstants.xpPerSession).
+Constants to add to app_constants.dart:
+
+
+static const int xpPerTask = 10;
+static const int xpPerSession = 25;
+static const int xpPerDeepSession = 50;
+static const int xpPerStreakDay = 15;
+Task 18: Daily Progress Card
+Files to create:
+
+focus_flow/lib/features/focus/widgets/daily_progress_card.dart
+Files to modify:
+
+focus_flow/lib/features/focus/screens/focus_screen.dart — add to header area
+Implementation approach:
+A compact horizontal card showing: current level badge, XP progress bar toward next level, today's task completion ratio (e.g., "3/5 tasks"), and current streak with flame.
+
+Logic:
+
+
+Widget build(BuildContext context) {
+  final progress = ref.watch(gamificationProvider);
+  final levelProgress = progress.todayXp % 100 / 100; // 0.0 to 1.0
+  return Card(
+    child: Row(
+      children: [
+        LevelBadge(level: progress.level),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              LinearProgressIndicator(value: levelProgress),
+              Text('${progress.todayXp % 100}/100 XP'),
+            ],
+          ),
+        ),
+        TaskRatio(todayXp: progress.tasksCompleted, total: progress.totalTasks),
+        StreakChip(streak: progress.currentStreak),
+      ],
+    ),
+  );
+}
+UI behavior:
+
+Compact (64px height), fits in focus screen header row.
+XP progress bar animates when XP is earned (flutter_animate).
+Level badge pulses on level-up.
+Task 19: Task Completion Celebration
+Files to create:
+
+focus_flow/lib/features/focus/widgets/task_completion_celebration.dart
+Files to modify:
+
+focus_flow/lib/features/focus/widgets/task_item.dart — trigger on swipe-complete
+Implementation approach:
+When a task is marked complete, show an overlay celebration widget that briefly appears over the screen: large checkmark animation, confetti effect, and XP earned indicator. Auto-dismisses after 2 seconds.
+
+Logic:
+
+
+class TaskCompletionCelebration extends StatelessWidget {
+  final int xpEarned;
+  final VoidCallback onDismiss;
+  
+  // Uses OverlayEntry to render above everything
+  // Uses confetti_widget package for confetti effect
+  // Animates checkmark with flutter_animate scale + opacity
+}
+Trigger: in TaskItem, when onComplete() is called, add the overlay:
+
+
+Overlay.of(context).insert(
+  OverlayEntry(
+    builder: (ctx) => TaskCompletionCelebration(
+      xpEarned: AppConstants.xpPerTask,
+      onDismiss: () => overlayEntry.remove(),
+    ),
+  ),
+);
+Future.delayed(const Duration(seconds: 2), () => overlayEntry.remove());
+Dependencies: confetti: ^0.7.0
+
+UI behavior:
+
+Green checkmark scales from 0 to 1.2 to 1.0 with spring physics.
+"+10 XP" text fades in and floats upward.
+Confetti particles fall for 1.5 seconds.
+Overlay is transparent — work underneath is visible.
+Task 20: Weekly Summary Card
+Files to create:
+
+focus_flow/lib/features/rest/widgets/weekly_summary_card.dart
+Files to modify:
+
+focus_flow/lib/features/rest/screens/rest_screen.dart — add below existing content
+Implementation approach:
+At the end of the week (or via a button on rest screen), show a summary card with: total focus minutes, total tasks completed, streak summary, most productive day, and the top achievement unlocked this week.
+
+Logic:
+
+Query DailyProgressRepository for last 7 DailyProgress entries.
+Aggregate: sum focus minutes, count completed tasks, find peak day.
+Determine if any achievement was unlocked this week.
+UI behavior:
+
+Card with gradient blue background.
+Stats in a 2×2 grid.
+"Share" button exports summary text.
+Appears at bottom of rest screen, always visible.
+Task 21: Achievements Tab in Library + Stats Section
+Files to create:
+
+focus_flow/lib/features/library/widgets/achievements_tab.dart
+Files to modify:
+
+focus_flow/lib/features/library/screens/library_screen.dart — replace Notes/Library tab structure with tab bar (Library | Notes | Achievements)
+focus_flow/lib/features/settings/widgets/stats_section.dart — replace inline stats in settings_screen.dart with this reusable widget
+Implementation approach:
+For the Library tab: add a TabBar with three tabs. Achievements tab shows AchievementGalleryScreen content inline (grid of badges). For the Settings stats section: create a StatsSection widget that reads from todayStatsProvider, streakProvider, and gamificationProvider.
+
+Achievements tab layout:
+
+GridView with 4 columns of AchievementBadge widgets.
+Section headers for each tier (Bronze, Silver, Gold, Platinum).
+Filter chips: "All", "Unlocked", "Locked".
+Stats section widget layout:
+
+Two-column row of stat cards: Focus Minutes (today/weekly), Tasks Done, Current Streak, Sessions Completed.
+Each card: icon, large number, label, trend indicator (up/down arrow vs last week).
+Summary of All Files by Status
+New files to create (25 files):
+
+focus_flow/lib/features/focus/widgets/task_item.dart
+focus_flow/lib/features/focus/widgets/task_detail_sheet.dart
+focus_flow/lib/features/flow/widgets/dynamic_motivator.dart
+focus_flow/lib/features/rest/widgets/adaptive_break_card.dart
+focus_flow/lib/features/rest/widgets/weekly_summary_card.dart
+focus_flow/lib/features/library/screens/weekly_insights_screen.dart
+focus_flow/lib/features/library/widgets/streak_hero_card.dart
+focus_flow/lib/features/library/widgets/weekly_bar_chart.dart
+focus_flow/lib/features/library/widgets/adhd_insight_card.dart
+focus_flow/lib/features/library/widgets/achievement_badge.dart
+focus_flow/lib/features/library/widgets/achievement_toast.dart
+focus_flow/lib/features/library/screens/achievement_gallery_screen.dart
+focus_flow/lib/features/library/widgets/achievements_tab.dart
+focus_flow/lib/features/onboarding/screens/onboarding_energy_task_screen.dart
+focus_flow/lib/features/focus/widgets/daily_progress_card.dart
+focus_flow/lib/features/focus/widgets/task_completion_celebration.dart
+focus_flow/lib/services/notification_service.dart
+focus_flow/lib/services/streak_service.dart
+focus_flow/lib/features/library/widgets/welcome_back_sheet.dart
+focus_flow/lib/data/models/achievement.dart
+focus_flow/lib/data/models/daily_progress.dart
+focus_flow/lib/data/models/streak_data.dart
+focus_flow/lib/data/models/energy_insight.dart
+focus_flow/lib/data/repositories/achievement_repository.dart
+focus_flow/lib/core/constants/achievements.dart
+Files to modify (14 files):
+
+focus_flow/lib/features/focus/screens/focus_screen.dart
+focus_flow/lib/features/focus/widgets/time_zone_card.dart
+focus_flow/lib/providers/task_provider.dart
+focus_flow/lib/features/library/screens/library_screen.dart
+focus_flow/lib/features/flow/screens/flow_screen.dart
+focus_flow/lib/providers/flow_provider.dart
+focus_flow/lib/data/models/flow_session.dart
+focus_flow/lib/features/flow/widgets/session_complete_sheet.dart
+focus_flow/lib/core/router/app_router.dart
+focus_flow/lib/features/onboarding/screens/onboarding_flow.dart
+focus_flow/lib/features/rest/screens/rest_screen.dart
+focus_flow/lib/features/settings/screens/settings_screen.dart
+focus_flow/lib/main.dart
+focus_flow/lib/core/constants/app_constants.dart
+Packages to add to pubspec.yaml:
+
+record: ^5.0.0
+permission_handler: ^11.0.0
+flutter_local_notifications: ^17.0.0
+confetti: ^0.7.0
+fl_chart: ^0.65.0
+Implementation order (dependency graph):
+
+Data models + constants (Tasks 17 foundation)
+NotificationService + StreakService (Tasks 9, 15)
+Core providers (achievement_provider, gamification_provider, energy_insight_provider)
+Repository layer (achievement_repository)
+Reusable widgets (dynamic_motivator, adaptive_break_card, achievement_badge)
+Screen-level widgets (weekly_insights_screen, achievement_gallery_screen, daily_progress_card)
+Feature wiring (TaskItem, WelcomeBackSheet, weekly_summary_card)
+Entry point integration (main.dart wiring, router updates, onboarding updates, Library tab restructure)
+Final polish (Task Completion Celebration confetti overlay)
+Dependencies Map
+
+app_constants.dart (XP values) ──────────────────────────────┐
+                                                              ▼
+data/models/ (achievement, daily_progress, streak_data,   ──► gamification_provider.dart
+ energy_insight)                                                   │
+                                                                      ▼
+data/repositories/ ──► achievement_repository.dart ──► achievement_provider.dart
+                                                                 │
+                                                                 ▼
+core/constants/achievements.dart ──► achievement_badge.dart ──┐
+                                                                │
+weekly_insights_screen.dart ◄── energy_insight_provider.dart ◄─┤
+         │                                                         │
+         ▼                                                         ▼
+  focus_screen.dart ──► daily_progress_card.dart ──► task_item.dart
+                                                              │
+                                                              ▼
+                                                    task_completion_celebration.dart
+
+fl_chart ──► weekly_bar_chart.dart ──► weekly_insights_screen
+confetti ──► task_completion_celebration.dart
+record ────► voice_record_sheet.dart (wired)
+flutter_local_notifications ──► notification_service.dart
+</analysis>
+<summary> Created the "Final Implementation Plan" document as text output, organized into 6 parts covering all 21 unimplemented items:
+Part 1 (4 tasks): Critical gaps — TaskItem swipe gestures, brag doc clipboard export, resource read-later persistence, voice capture real implementation
+Part 2 (2 tasks): Settings revamp remaining — pomodoro long break after 4 rounds, session↔task title denormalization
+Part 3 (4 tasks): Strategic opportunities — weekly insights screen, anytime pool zone reassignment, notification service, onboarding energy teaching screen
+Part 4 (4 tasks): UX/engagement gaps — dynamic motivator, achievement/badge system (16 badges, 4 tiers), adaptive rest card, energy trend feedback
+Part 5 (2 tasks): Streak service + re-engagement — streak service with grace-day logic, welcome back sheet
+Part 6 (5 tasks): Full gamification system — gamification provider + 3 data models, daily progress card, task completion celebration with confetti, weekly summary card, achievements tab in library + stats section in settings
+The document specifies all 25 new files to create, 14 files to modify, 5 new packages to add, and an ordered dependency graph showing the implementation sequence from foundation models through to final polish.

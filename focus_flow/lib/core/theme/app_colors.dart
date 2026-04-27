@@ -107,12 +107,10 @@ class AppColors {
   static const Color purple = Color(0xFF8B5CF6);
 
   // ============================================
-  // TIME ZONE COLORS
-  // ============================================
-
-  static const Color zoneMorning = Color(0xFFF5B800);
-  static const Color zoneAfternoon = Color(0xFFF97316);
-  static const Color zoneEvening = Color(0xFF6366F1);
+  // TIME ZONE COLORS - Soft pastel palette for consistent design
+  static const Color zoneMorning = Color(0xFFFCD34D);    // Soft yellow
+  static const Color zoneAfternoon = Color(0xFFFB923C);  // Soft orange
+  static const Color zoneEvening = Color(0xFF818CF8);    // Soft indigo
 
   // ============================================
   // GREY SCALE
@@ -125,6 +123,7 @@ class AppColors {
   static const Color grey400 = Color(0xFF9CA3AF);
   static const Color grey500 = Color(0xFF6B7280);
   static const Color grey600 = Color(0xFF4B5563);
+  static const Color grey700 = Color(0xFF374151);
   static const Color grey800 = Color(0xFF1F2937);
   static const Color white = Color(0xFFFFFFFF);
 
@@ -137,6 +136,17 @@ class AppColors {
   static const Color tealBorder = Color(0xFF99F6E4);
   static const Color teal100 = Color(0xFFCCFBF1);
   static const Color teal700 = Color(0xFF0F766E);
+
+  // Session type colors
+  static const Color sessionPomodoro = Color(0xFFEF4444);
+  static const Color sessionDeep = Color(0xFFEC4899);
+
+  // Category colors
+  static const Color categoryPink = Color(0xFFE91E63);
+
+  // Additional utility colors
+  static const Color brown = Color(0xFF795548);
+  static const Color cyan = Color(0xFF06B6D4);
 
   // ─────────────────────────────────────────────────────────────────
   // SETTINGS UI COLORS

@@ -1,20 +1,47 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_icon.dart';
+import '../../../data/models/wind_down_entry.dart';
+import '../../../data/models/task.dart';
+import '../../../data/models/enums.dart';
+import '../../../data/repositories/wind_down_repository.dart';
+import '../../../providers/providers.dart';
 
-class WindDownRoutineSheet extends StatefulWidget {
+class WindDownRoutineSheet extends ConsumerStatefulWidget {
   const WindDownRoutineSheet({super.key});
 
   @override
-  State<WindDownRoutineSheet> createState() => _WindDownRoutineSheetState();
+  ConsumerState<WindDownRoutineSheet> createState() => _WindDownRoutineSheetState();
 }
 
-class _WindDownRoutineSheetState extends State<WindDownRoutineSheet> {
+class _WindDownRoutineSheetState extends ConsumerState<WindDownRoutineSheet> {
   int _currentStep = 0;
   bool _screenOffComplete = false;
   String _winReflection = '';
   String _tomorrowPreview = '';
   bool _routineComplete = false;
+  int _windDownMinutes = 0;
+  WindDownRepository? _repository;
+
+  @override
+  void initState() {
+    super.initState();
+    _initRepository();
+  }
+
+  Future<void> _initRepository() async {
+    _repository = await WindDownRepository.create();
+    // Load today's entry if it exists
+    final today = _repository!.getByDate(DateTime.now());
+    if (today != null && mounted) {
+      setState(() {
+        _winReflection = today.winReflection ?? '';
+        _tomorrowPreview = today.tomorrowPreview ?? '';
+        _windDownMinutes = today.windDownMinutes;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +59,7 @@ class _WindDownRoutineSheetState extends State<WindDownRoutineSheet> {
             width: 40,
             height: 4,
             decoration: BoxDecoration(
-              color: Colors.grey.shade300,
+              color: AppColors.grey300,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -52,7 +79,7 @@ class _WindDownRoutineSheetState extends State<WindDownRoutineSheet> {
                 const Spacer(),
                 Text(
                   '${_currentStep + 1}/3',
-                  style: TextStyle(color: Colors.grey.shade600),
+                  style: const TextStyle(color: AppColors.grey600),
                 ),
               ],
             ),
@@ -62,7 +89,7 @@ class _WindDownRoutineSheetState extends State<WindDownRoutineSheet> {
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: LinearProgressIndicator(
               value: (_currentStep + 1) / 3,
-              backgroundColor: Colors.grey.shade200,
+              backgroundColor: AppColors.grey200,
               valueColor: const AlwaysStoppedAnimation(AppColors.purple),
             ),
           ),
@@ -154,7 +181,7 @@ class _WindDownRoutineSheetState extends State<WindDownRoutineSheet> {
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 16,
-              color: Colors.grey.shade600,
+              color: AppColors.grey600,
             ),
           ),
           const Spacer(),
@@ -207,7 +234,7 @@ class _WindDownRoutineSheetState extends State<WindDownRoutineSheet> {
             "What's one thing you accomplished today?",
             style: TextStyle(
               fontSize: 16,
-              color: Colors.grey.shade600,
+              color: AppColors.grey600,
             ),
           ),
           const SizedBox(height: 24),
@@ -257,7 +284,7 @@ class _WindDownRoutineSheetState extends State<WindDownRoutineSheet> {
             'What\'s one thing you want to tackle tomorrow?',
             style: TextStyle(
               fontSize: 16,
-              color: Colors.grey.shade600,
+              color: AppColors.grey600,
             ),
           ),
           const SizedBox(height: 24),
@@ -307,7 +334,7 @@ class _WindDownRoutineSheetState extends State<WindDownRoutineSheet> {
             'Sweet dreams. See you tomorrow.',
             style: TextStyle(
               fontSize: 16,
-              color: Colors.grey.shade600,
+              color: AppColors.grey600,
             ),
           ),
         ],
@@ -328,25 +355,55 @@ class _WindDownRoutineSheetState extends State<WindDownRoutineSheet> {
     }
   }
 
-  void _nextStep() {
+  Future<void> _nextStep() async {
     if (_currentStep < 2) {
       setState(() => _currentStep++);
     } else {
-      // Save reflection data (per design.md: saves to Session Notes tagged #daily-reflection)
-      _saveWindDownData();
       setState(() => _routineComplete = true);
-      Future.delayed(const Duration(seconds: 2), () {
-        if (mounted) Navigator.pop(context);
-      });
+      await _saveWindDownData();
+      await Future.delayed(const Duration(seconds: 2));
+      if (mounted) Navigator.pop(context);
     }
   }
 
-  void _saveWindDownData() {
-    // Wind-down data is captured - would be saved to Hive/Notes here
-    // Per design.md: "One Win" saves to Session Notes tagged #daily-reflection
-    // "Tomorrow Preview" auto-promotes to Morning block
-    if (_winReflection.isNotEmpty || _tomorrowPreview.isNotEmpty) {
-      // TODO: Save to Hive - reflection notes and tomorrow preview
+  Future<void> _saveWindDownData() async {
+    if (_winReflection.isEmpty && _tomorrowPreview.isEmpty) return;
+
+    final entry = WindDownEntry.create(
+      winReflection: _winReflection.isNotEmpty ? _winReflection : null,
+      tomorrowPreview: _tomorrowPreview.isNotEmpty ? _tomorrowPreview : null,
+      windDownMinutes: _windDownMinutes,
+    );
+
+    await _repository?.save(entry);
+
+    // If tomorrow preview exists, promote to a Morning task for tomorrow
+    if (_tomorrowPreview.isNotEmpty) {
+      await _createTomorrowMorningTask(_tomorrowPreview);
+    }
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Wind-down saved! 🌙'),
+          backgroundColor: AppColors.success,
+        ),
+      );
+    }
+  }
+
+  Future<void> _createTomorrowMorningTask(String preview) async {
+    try {
+      final repo = await ref.read(taskRepositoryProvider.future);
+      final task = Task.create(
+        title: '📋 Tomorrow: $preview',
+        zone: TimeZone.morning,
+        notes: 'Auto-created from wind-down preview',
+      );
+      await repo.save(task);
+    } catch (e) {
+      // If repository isn't available, skip creating the task
+      debugPrint('Failed to create tomorrow task: $e');
     }
   }
 }

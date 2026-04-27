@@ -42,22 +42,26 @@ class MainShell extends StatelessWidget {
       body: child,
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).brightness == Brightness.dark
+              ? AppColors.charcoal
+              : Colors.white,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 20,
-              offset: const Offset(0, -5),
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 12,
+              offset: const Offset(0, -2),
             ),
           ],
         ),
         child: SafeArea(
+          top: false,
           child: NavigationBar(
             selectedIndex: selectedIndex,
             onDestinationSelected: (index) => _onItemTapped(context, index),
-            backgroundColor: Colors.white,
-            indicatorColor: AppColors.amber.withOpacity(0.2),
-            height: 64,
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            indicatorColor: AppColors.amber.withOpacity(0.15),
+            height: 60,
             labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
             destinations: [
               _NavDestination(

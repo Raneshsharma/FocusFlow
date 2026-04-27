@@ -2,7 +2,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/models/task.dart';
 import '../data/models/enums.dart';
 import '../data/repositories/task_repository.dart';
+import '../features/achievements/widgets/achievement_toast.dart';
+import '../features/focus/widgets/task_completion_celebration.dart';
+import '../services/overlay_service.dart';
 import 'providers.dart';
+import 'achievement_provider.dart';
+import 'flow_provider.dart';
+import 'gamification_provider.dart';
 
 // Provider for tasks list - watches repo for async completion
 final tasksProvider = AsyncNotifierProvider<TasksNotifier, List<Task>>(() {
@@ -47,7 +53,44 @@ class TasksNotifier extends AsyncNotifier<List<Task>> {
       if (task != null) {
         task.completed = true;
         task.completedAt = DateTime.now();
+        task.completionCount = (task.completionCount ?? 0) + 1;
         await _repository!.save(task);
+
+        // Update stats and check achievements
+        try {
+          final statsRepo = await ref.read(statsRepositoryProvider.future);
+          await statsRepo.incrementTasksCompleted(DateTime.now());
+          final stats = await statsRepo.getStats();
+          final streak = await statsRepo.getCurrentStreak();
+          final newAchievement = await ref.read(achievementsProvider.notifier).checkAndUnlock(
+            totalSessions: stats.totalSessions,
+            totalTasks: stats.totalTasksCompleted,
+            currentStreak: streak,
+          );
+          if (newAchievement != null) {
+            // Use overlay service for showing achievement toast
+            if (overlayService.isInitialized) {
+              final defs = ref.read(achievementDefinitionsProvider);
+              try {
+                final def = defs.firstWhere((d) => d.id == newAchievement.definitionId);
+                AchievementToast.showOverlay(overlayService, def);
+              } catch (_) {}
+            }
+          }
+        } catch (_) {}
+
+        // Add XP for completing task
+        await ref.read(gamificationProvider.notifier).addXpForTask();
+
+        // Show celebration using overlay service
+        if (overlayService.isInitialized) {
+          TaskCompletionCelebration.showOverlay(
+            overlayService,
+            xpEarned: 10,
+            taskTitle: task.title,
+          );
+        }
+
         ref.invalidateSelf();
       }
     }

@@ -5,6 +5,7 @@ import '../../features/focus/screens/focus_screen.dart';
 import '../../features/flow/screens/flow_screen.dart';
 import '../../features/rest/screens/rest_screen.dart';
 import '../../features/library/screens/library_screen.dart';
+import '../../features/library/screens/weekly_insights_screen.dart';
 import '../../features/settings/screens/settings_screen.dart';
 import '../../features/onboarding/screens/onboarding_flow.dart';
 import '../../features/onboarding/providers/onboarding_provider.dart';
@@ -79,7 +80,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/settings',
-        builder: (context, state) => const SettingsScreen(),
+        pageBuilder: (context, state) => const NoTransitionPage(
+          child: SettingsScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/insights',
+        pageBuilder: (context, state) => const NoTransitionPage(
+          child: WeeklyInsightsScreen(),
+        ),
       ),
     ],
   );

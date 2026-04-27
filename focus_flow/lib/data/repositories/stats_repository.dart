@@ -67,4 +67,79 @@ class StatsRepository {
   Future<void> deleteAll() async {
     await _box.clear();
   }
+
+  /// Returns aggregated stats across all days
+  Future<AggregatedStats> getStats() async {
+    final allStats = getAll();
+    int totalSessions = 0;
+    int totalTasks = 0;
+    int totalMinutes = 0;
+
+    for (final stat in allStats) {
+      totalSessions += stat.sessionsCompleted;
+      totalTasks += stat.tasksCompleted;
+      totalMinutes += stat.focusMinutes;
+    }
+
+    return AggregatedStats(
+      totalSessions: totalSessions,
+      totalTasksCompleted: totalTasks,
+      totalFocusMinutes: totalMinutes,
+    );
+  }
+
+  /// Calculates current streak based on active dates
+  Future<int> getCurrentStreak() async {
+    final dates = getActiveDates();
+    if (dates.isEmpty) return 0;
+
+    // Sort dates descending (most recent first)
+    dates.sort((a, b) => b.compareTo(a));
+
+    final today = DateTime.now();
+    final todayDate = DateTime(today.year, today.month, today.day);
+    final yesterday = todayDate.subtract(const Duration(days: 1));
+
+    // Check if streak is active (today or yesterday had activity)
+    final mostRecent = dates.first;
+    final mostRecentDate = DateTime(mostRecent.year, mostRecent.month, mostRecent.day);
+
+    if (mostRecentDate.isBefore(yesterday)) {
+      return 0; // Streak broken
+    }
+
+    // Count consecutive days
+    int streak = 1;
+    for (int i = 0; i < dates.length - 1; i++) {
+      final current = DateTime(dates[i].year, dates[i].month, dates[i].day);
+      final next = DateTime(dates[i + 1].year, dates[i + 1].month, dates[i + 1].day);
+
+      final diff = current.difference(next).inDays;
+      if (diff == 1) {
+        streak++;
+      } else {
+        break;
+      }
+    }
+
+    return streak;
+  }
+
+  /// Returns total focus minutes across all sessions
+  int getTotalFocusMinutes() {
+    final allStats = getAll();
+    return allStats.fold<int>(0, (sum, stat) => sum + stat.focusMinutes);
+  }
+}
+
+class AggregatedStats {
+  final int totalSessions;
+  final int totalTasksCompleted;
+  final int totalFocusMinutes;
+
+  AggregatedStats({
+    required this.totalSessions,
+    required this.totalTasksCompleted,
+    required this.totalFocusMinutes,
+  });
 }

@@ -123,8 +123,8 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
                     color: AppColors.grey100,
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: AppIcon(
-                    AppIcons.close,
+                  child: const Icon(
+                    Icons.close,
                     size: 18,
                     color: AppColors.grey600,
                   ),
@@ -254,8 +254,8 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
                         ),
                       ),
                       SizedBox(width: 8),
-                      AppIcon(
-                        AppIcons.chevronRight,
+                      Icon(
+                        Icons.arrow_forward,
                         color: Colors.white,
                         size: 20,
                       ),
@@ -361,7 +361,7 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
               ),
               _ZoneChip(
                 label: 'Anytime',
-                emoji: '⏰',
+                emoji: '♾️',
                 color: AppColors.teal,
                 isSelected: _selectedZone == TimeZone.anytime,
                 onTap: () => setState(() => _selectedZone = TimeZone.anytime),

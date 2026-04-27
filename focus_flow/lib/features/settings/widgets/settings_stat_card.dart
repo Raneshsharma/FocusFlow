@@ -44,7 +44,7 @@ class SettingsStatCard extends StatelessWidget {
             style: TextStyle(
               fontFamily: 'Inter',
               fontSize: 11,
-              color: Colors.grey.shade700,
+              color: AppColors.grey700,
             ),
           ),
         ],

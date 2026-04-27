@@ -25,4 +25,13 @@ class AppConstants {
   // UI
   static const Duration animationDuration = Duration(milliseconds: 300);
   static const Duration toastDuration = Duration(seconds: 3);
+
+  // XP values per action
+  static const int xpPerTask = 10;
+  static const int xpPerSession = 25;
+  static const int xpPerDeepSession = 50;
+  static const int xpPerStreakDay = 15;
+
+  // Level thresholds
+  static const int xpPerLevel = 100;
 }

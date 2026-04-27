@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../data/models/task.dart';
 import '../../../data/models/enums.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/widgets/app_icon.dart';
-import 'task_card.dart';
+import 'task_item.dart';
 
 class TimeZoneCard extends StatefulWidget {
   final String icon;
@@ -51,14 +50,15 @@ class _TimeZoneCardState extends State<TimeZoneCard> {
       ),
       child: Column(
         children: [
-          // Header
+          // Header - fixed 48px height for consistency
           InkWell(
             onTap: () => setState(() => _isExpanded = !_isExpanded),
             borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+              height: 64,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
               decoration: BoxDecoration(
-                color: widget.color.withOpacity(0.08),
+                color: widget.color.withOpacity(0.06),
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
                 border: Border(
                   left: BorderSide(color: widget.color, width: 4),
@@ -66,22 +66,26 @@ class _TimeZoneCardState extends State<TimeZoneCard> {
               ),
               child: Row(
                 children: [
-                  // Zone icon
+                  // Zone icon - perfectly centered 44x44 container
                   Container(
                     width: 44,
                     height: 44,
                     decoration: BoxDecoration(
-                      color: widget.color.withOpacity(0.15),
+                      color: widget.color.withOpacity(0.12),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Center(
-                      child: Text(widget.icon, style: const TextStyle(fontSize: 22)),
+                      child: Text(
+                        widget.icon,
+                        style: const TextStyle(fontSize: 22),
+                      ),
                     ),
                   ),
-                  const SizedBox(width: 14),
-                  // Title and time
+                  const SizedBox(width: 12),
+                  // Title and time - aligned
                   Expanded(
                     child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
@@ -90,7 +94,7 @@ class _TimeZoneCardState extends State<TimeZoneCard> {
                               widget.title,
                               style: TextStyle(
                                 fontFamily: 'Montserrat',
-                                fontSize: 17,
+                                fontSize: 16,
                                 fontWeight: FontWeight.w700,
                                 color: widget.color,
                               ),
@@ -100,8 +104,8 @@ class _TimeZoneCardState extends State<TimeZoneCard> {
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                 decoration: BoxDecoration(
-                                  color: widget.color.withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(10),
+                                  color: widget.color.withOpacity(0.15),
+                                  borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
                                   'Now',
@@ -116,28 +120,29 @@ class _TimeZoneCardState extends State<TimeZoneCard> {
                             ],
                           ],
                         ),
-                        const SizedBox(height: 3),
+                        const SizedBox(height: 2),
                         Text(
                           widget.timeRange,
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontFamily: 'Inter',
                             fontSize: 12,
                             fontWeight: FontWeight.w400,
-                            color: AppColors.grey500,
+                            color: AppColors.grey600,
                           ),
                         ),
                       ],
                     ),
                   ),
-                  // Task count badge
+                  // Task count badge - fixed size container
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    height: 28,
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(14),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.06),
+                          color: Colors.black.withOpacity(0.05),
                           blurRadius: 4,
                           offset: const Offset(0, 1),
                         ),
@@ -146,10 +151,9 @@ class _TimeZoneCardState extends State<TimeZoneCard> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        AppIcon(
-                          AppIcons.inbox,
-                          size: 14,
-                          color: AppColors.grey500,
+                        const Text(
+                          '📋',
+                          style: TextStyle(fontSize: 12),
                         ),
                         const SizedBox(width: 5),
                         Text(
@@ -158,34 +162,41 @@ class _TimeZoneCardState extends State<TimeZoneCard> {
                             fontFamily: 'Inter',
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
-                            color: AppColors.grey600,
+                            color: AppColors.grey700,
                           ),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(width: 4),
-                  // Add button
+                  const SizedBox(width: 8),
+                  // Add button - identical size across all cards
                   GestureDetector(
                     onTap: widget.onAddTask,
                     child: Container(
-                      padding: const EdgeInsets.all(8),
+                      width: 28,
+                      height: 28,
                       decoration: BoxDecoration(
-                        color: widget.color.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(10),
+                        color: widget.color.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(8),
                       ),
-                      child: AppIcon(
-                        AppIcons.add,
-                        size: 18,
-                        color: widget.color,
+                      child: Center(
+                        child: Text(
+                          '+',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: widget.color,
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 4),
-                  AppIcon(
-                    _isExpanded ? AppIcons.expandLess : AppIcons.expandMore,
-                    color: AppColors.grey400,
-                    size: 20,
+                  const SizedBox(width: 6),
+                  // Expand arrow
+                  Icon(
+                    _isExpanded ? Icons.expand_less : Icons.expand_more,
+                    size: 22,
+                    color: AppColors.grey500,
                   ),
                 ],
               ),
@@ -195,69 +206,77 @@ class _TimeZoneCardState extends State<TimeZoneCard> {
           // Content - tasks or empty state
           if (_isExpanded)
             Container(
-              padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
               child: hasTasks
                   ? Column(
                       children: widget.tasks.map((task) => Padding(
-                        padding: const EdgeInsets.only(top: 10),
-                        child: TaskCard(task: task),
+                        padding: const EdgeInsets.only(top: 8),
+                        child: TaskItem(task: task),
                       )).toList(),
                     )
-                  : Container(
-                      padding: const EdgeInsets.symmetric(vertical: 20),
-                      decoration: BoxDecoration(
-                        color: AppColors.grey50,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: AppColors.grey200.withOpacity(0.5),
-                          width: 1,
-                        ),
-                      ),
-                      child: Column(
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              GestureDetector(
-                                onTap: widget.onAddTask,
-                                child: Container(
-                                  padding: const EdgeInsets.all(10),
-                                  decoration: BoxDecoration(
-                                    color: widget.color.withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: AppIcon(
-                                    AppIcons.add,
-                                    color: widget.color.withOpacity(0.5),
-                                    size: 20,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 10),
-                          Text(
-                            'No tasks scheduled',
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                              color: AppColors.grey600,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Tap + to add tasks to this zone',
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 12,
-                              color: AppColors.grey400,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                  : _buildEmptyState(),
             ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 24),
+      decoration: BoxDecoration(
+        color: AppColors.grey50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: AppColors.grey200.withOpacity(0.5),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Plus button - perfectly centered
+          GestureDetector(
+            onTap: widget.onAddTask,
+            child: Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: widget.color.withOpacity(0.08),
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: Text(
+                  '+',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: widget.color.withOpacity(0.6),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'No tasks scheduled',
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: AppColors.grey700,
+            ),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Tap + to add tasks to this zone',
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 12,
+              fontWeight: FontWeight.w400,
+              color: AppColors.grey500,
+            ),
+          ),
         ],
       ),
     );

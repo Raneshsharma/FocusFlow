@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:share_plus/share_plus.dart' as share_plus;
+import 'package:permission_handler/permission_handler.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_icon.dart';
 import '../../../core/utils/date_utils.dart' as utils;
@@ -8,9 +13,15 @@ import '../../../providers/providers.dart';
 import '../../../data/models/resource.dart';
 import '../../../data/models/note.dart';
 import '../../../data/models/flow_session.dart';
+import '../../../data/models/enums.dart';
+import '../../../data/models/task.dart';
+import '../../../data/models/template.dart';
+import '../../../services/file_helper.dart';
+import '../../../services/voice_transcription_service.dart';
 import '../widgets/session_list_item.dart';
 import '../widgets/template_card.dart';
 import '../widgets/resource_tile.dart';
+import '../../achievements/screens/achievement_gallery_screen.dart';
 
 class LibraryScreen extends ConsumerStatefulWidget {
   const LibraryScreen({super.key});
@@ -25,11 +36,14 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
   final _searchController = TextEditingController();
   String _searchQuery = '';
   bool _bragMode = false; // Toggle for Archive "Brag Document" mode
+  MoodTag? _moodFilter; // Current mood filter (null = All)
+  bool _favoritesSortDesc = true; // true = by frequency (most completed first)
+  final Set<String> _selectedNoteTags = {}; // Selected note tags for filtering
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 6, vsync: this);
+    _tabController = TabController(length: 7, vsync: this);
   }
 
   @override
@@ -54,9 +68,10 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
             Tab(text: 'Notes'),
             Tab(text: 'Archive'),
             Tab(text: 'Resources'),
+            Tab(text: '🏆'),
           ],
           labelColor: AppColors.teal,
-          unselectedLabelColor: Colors.grey,
+          unselectedLabelColor: AppColors.grey500,
           indicatorColor: AppColors.teal,
         ),
       ),
@@ -76,7 +91,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
                     borderSide: BorderSide.none,
                   ),
                   filled: true,
-                  fillColor: Colors.grey.shade100,
+                  fillColor: AppColors.grey100,
                 ),
                 onChanged: (value) => setState(() => _searchQuery = value),
               ),
@@ -93,6 +108,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
                   _buildNotesTab(),
                   _buildArchiveTab(),
                   _buildResourcesTab(),
+                  _buildAchievementsTab(),
                 ],
               ),
             ),
@@ -110,11 +126,19 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
 
     return sessionsAsync.when(
       data: (repo) {
-        final sessions = repo.getAll().where((s) =>
+        final allSessions = repo.getAll();
+
+        // Apply search filter
+        final filteredBySearch = allSessions.where((s) =>
           _searchQuery.isEmpty ||
           s.type.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           (s.moodTag?.name.toLowerCase().contains(_searchQuery.toLowerCase()) ?? false)
         ).toList();
+
+        // Apply mood filter
+        final sessions = _moodFilter == null
+            ? filteredBySearch
+            : filteredBySearch.where((s) => s.moodTag == _moodFilter).toList();
 
         // Sort by date, most recent first
         sessions.sort((a, b) => (b.completedAt ?? DateTime.now())
@@ -232,7 +256,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
           label,
           style: TextStyle(
             fontSize: 12,
-            color: Colors.grey.shade600,
+            color: AppColors.grey600,
           ),
         ),
       ],
@@ -276,10 +300,9 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
     return streak;
   }
 
-  String _getMostProductiveDay(dynamic repo) {
-    if (repo == null) return '-';
+  String _getMostProductiveDay(List<FlowSession> sessions) {
+    if (sessions.isEmpty) return '-';
 
-    final sessions = repo.getAll();
     final dayCounts = <int, int>{};
 
     for (final session in sessions) {
@@ -302,39 +325,45 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
-          _buildFilterChip('All', true),
-          _buildFilterChip('Great 🔥', false, () => _filterByMood(MoodTag.great)),
-          _buildFilterChip('Good 😊', false, () => _filterByMood(MoodTag.good)),
-          _buildFilterChip('Okay 😐', false, () => _filterByMood(MoodTag.okay)),
-          _buildFilterChip('Struggled 😓', false, () => _filterByMood(MoodTag.struggled)),
+          _buildFilterChip('All', _moodFilter == null, () {
+            setState(() => _moodFilter = null);
+          }),
+          _buildFilterChip('Great 🔥', _moodFilter == MoodTag.great, () {
+            setState(() => _moodFilter = MoodTag.great);
+          }),
+          _buildFilterChip('Good 😊', _moodFilter == MoodTag.good, () {
+            setState(() => _moodFilter = MoodTag.good);
+          }),
+          _buildFilterChip('Okay 😐', _moodFilter == MoodTag.okay, () {
+            setState(() => _moodFilter = MoodTag.okay);
+          }),
+          _buildFilterChip('Struggled 😓', _moodFilter == MoodTag.struggled, () {
+            setState(() => _moodFilter = MoodTag.struggled);
+          }),
         ],
       ),
     );
   }
 
-  Widget _buildFilterChip(String label, bool selected, [VoidCallback? onTap]) {
+  Widget _buildFilterChip(String label, bool selected, VoidCallback onTap) {
     return GestureDetector(
-      onTap: onTap ?? () {},
+      onTap: onTap,
       child: Container(
         margin: const EdgeInsets.only(right: 8),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: selected ? AppColors.teal : Colors.grey.shade200,
+          color: selected ? AppColors.teal : AppColors.grey200,
           borderRadius: BorderRadius.circular(16),
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: selected ? Colors.white : Colors.grey.shade700,
+            color: selected ? Colors.white : AppColors.grey700,
             fontSize: 12,
           ),
         ),
       ),
     );
-  }
-
-  void _filterByMood(MoodTag mood) {
-    // TODO: Implement mood filtering
   }
 
   Widget _buildSessionsList(List<FlowSession> sessions) {
@@ -363,7 +392,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
                 dateKey,
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
-                  color: Colors.grey,
+                  color: AppColors.grey500,
                 ),
               ),
             ),
@@ -396,7 +425,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
               const SizedBox(width: 4),
             ],
             if (session.reflection != null)
-              AppIcon(AppIcons.note, size: 14, color: Colors.grey),
+              AppIcon(AppIcons.note, size: 14, color: AppColors.grey500),
           ],
         ),
         trailing: AppIcon(AppIcons.chevronRight),
@@ -445,7 +474,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
               const SizedBox(height: 16),
               const Text(
                 'Reflection',
-                style: TextStyle(fontWeight: FontWeight.w600, color: Colors.grey),
+                style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.grey500),
               ),
               const SizedBox(height: 8),
               Text(session.reflection!),
@@ -454,17 +483,19 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
             // Mood tagging
             const Text(
               'How did this session feel?',
-              style: TextStyle(fontWeight: FontWeight.w600, color: Colors.grey),
+              style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.grey500),
             ),
             const SizedBox(height: 8),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: MoodTag.values.map((mood) =>
                 GestureDetector(
-                  onTap: () {
+                  onTap: () async {
                     session.moodTag = mood;
                     // Save to repository
-                    Navigator.pop(context);
+                    final repo = await ref.read(sessionRepositoryProvider.future);
+                    await repo.save(session);
+                    if (mounted) Navigator.pop(context);
                   },
                   child: Column(
                     children: [
@@ -503,7 +534,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(color: Colors.grey)),
+          Text(label, style: const TextStyle(color: AppColors.grey500)),
           Text(value, style: const TextStyle(fontWeight: FontWeight.w500)),
         ],
       ),
@@ -532,13 +563,12 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
         }
 
         // Sort by streak count (hot templates first) then by last used
-        final sortedTemplates = List.from(templates);
-        sortedTemplates.sort((a, b) {
+        final sortedTemplates = templates.toList()..sort((a, b) {
           if (a.streakCount != b.streakCount) {
             return b.streakCount.compareTo(a.streakCount);
           }
-          final aLast = a.lastUsed ?? DateTime;
-          final bLast = b.lastUsed ?? DateTime;
+          final aLast = a.lastUsed ?? DateTime.now();
+          final bLast = b.lastUsed ?? DateTime.now();
           return bLast.compareTo(aLast);
         });
 
@@ -549,26 +579,34 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
 
             // Templates grid
             Expanded(
-              child: GridView.builder(
-                padding: const EdgeInsets.all(16),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  childAspectRatio: 1.2,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                ),
-                itemCount: sortedTemplates.length,
-                itemBuilder: (context, index) {
-                  final template = sortedTemplates[index];
-                  return TemplateCard(
-                    name: template.name,
-                    taskCount: template.taskIds.length,
-                    usageCount: template.usageCount,
-                    streakCount: template.streakCount,
-                    bestTime: template.bestTimeOfDay,
-                    isHot: template.streakCount >= 3,
-                    onTap: () => _applyTemplate(template),
-                    onLongPress: () => _showTemplateOptions(template),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  // Responsive grid based on screen width
+                  final crossAxisCount = constraints.maxWidth >= 600 ? 3 : 2;
+                  final aspectRatio = constraints.maxWidth >= 900 ? 1.4 : 1.2;
+
+                  return GridView.builder(
+                    padding: const EdgeInsets.all(16),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: crossAxisCount,
+                      childAspectRatio: aspectRatio,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                    ),
+                    itemCount: sortedTemplates.length,
+                    itemBuilder: (context, index) {
+                      final template = sortedTemplates[index];
+                      return TemplateCard(
+                        name: template.name,
+                        taskCount: template.taskIds.length,
+                        usageCount: template.usageCount,
+                        streakCount: template.streakCount,
+                        bestTime: template.bestTimeOfDay,
+                        isHot: template.streakCount >= 3,
+                        onTap: () => _applyTemplate(template),
+                        onLongPress: () => _showTemplateOptions(template),
+                      );
+                    },
                   );
                 },
               ),
@@ -581,7 +619,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
     );
   }
 
-  Widget _buildTemplatesQuickActions(List<dynamic> templates) {
+  Widget _buildTemplatesQuickActions(List<Template> templates) {
     // Find most recently used template
     final withLastUsed = templates.where((t) => t.lastUsed != null).toList();
     withLastUsed.sort((a, b) => b.lastUsed!.compareTo(a.lastUsed!));
@@ -609,7 +647,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
     );
   }
 
-  void _applyTemplate(dynamic template) {
+  void _applyTemplate(Template template) {
     template.recordUse();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -622,7 +660,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
     );
   }
 
-  void _showTemplateOptions(dynamic template) {
+  void _showTemplateOptions(Template template) {
     showModalBottomSheet(
       context: context,
       builder: (context) => Column(
@@ -631,30 +669,107 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
           ListTile(
             leading: AppIcon(AppIcons.copy, size: 20),
             title: const Text('Duplicate'),
-            onTap: () {
+            onTap: () async {
               Navigator.pop(context);
-              // TODO: Implement duplicate
+              final repo = await ref.read(templateRepositoryProvider.future);
+              final copy = Template(
+                id: DateTime.now().millisecondsSinceEpoch.toString(),
+                name: '${template.name} (Copy)',
+                taskIds: List<String>.from(template.taskIds),
+                zone: template.zone,
+                usageCount: 0,
+                streakCount: 0,
+              );
+              await repo.save(copy);
+              setState(() {});
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Template "${copy.name}" created'),
+                    backgroundColor: AppColors.success,
+                  ),
+                );
+              }
             },
           ),
           ListTile(
             leading: AppIcon(AppIcons.edit, size: 20),
-            title: const Text('Edit'),
-            onTap: () {
+            title: const Text('Rename'),
+            onTap: () async {
               Navigator.pop(context);
-              // TODO: Implement edit
+              await _showRenameTemplateDialog(template);
             },
           ),
           ListTile(
             leading: AppIcon(AppIcons.delete, color: Colors.red, size: 20),
             title: const Text('Delete', style: TextStyle(color: Colors.red)),
-            onTap: () {
+            onTap: () async {
               Navigator.pop(context);
-              // TODO: Implement delete
+              final confirm = await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Delete Template?'),
+                  content: Text(
+                    'Delete "${template.name}"? This cannot be undone.',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('Cancel'),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      child: const Text('Delete', style: TextStyle(color: Colors.red)),
+                    ),
+                  ],
+                ),
+              );
+              if (confirm == true) {
+                final repo = await ref.read(templateRepositoryProvider.future);
+                await repo.delete(template.id);
+                setState(() {});
+              }
             },
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _showRenameTemplateDialog(dynamic template) async {
+    final controller = TextEditingController(text: template.name);
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Rename Template'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(
+            labelText: 'Template name',
+            hintText: 'e.g., Morning Routine',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.teal),
+            child: const Text('Rename'),
+          ),
+        ],
+      ),
+    );
+
+    if (result == true && controller.text.trim().isNotEmpty) {
+      final repo = await ref.read(templateRepositoryProvider.future);
+      template.name = controller.text.trim();
+      await repo.save(template);
+      setState(() {});
+    }
   }
 
   // ============================================
@@ -676,12 +791,25 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
     }
 
     // Sort by energy level (high first) then by completion count
-    filtered.sort((a, b) {
-      final aEnergy = a.energy.index;
-      final bEnergy = b.energy.index;
-      if (aEnergy != bEnergy) return aEnergy.compareTo(bEnergy); // High energy first
-      return (b.completionCount ?? 0).compareTo(a.completionCount ?? 0);
-    });
+    if (_favoritesSortDesc) {
+      // Sort by frequency: most completed first
+      filtered.sort((a, b) {
+        final aCount = a.completionCount ?? 0;
+        final bCount = b.completionCount ?? 0;
+        if (aCount != bCount) return bCount.compareTo(aCount);
+        // Secondary: by energy (high energy first)
+        return a.energy.index.compareTo(b.energy.index);
+      });
+    } else {
+      // Sort by energy priority first
+      filtered.sort((a, b) {
+        final aEnergy = a.energy.index;
+        final bEnergy = b.energy.index;
+        if (aEnergy != bEnergy) return aEnergy.compareTo(bEnergy);
+        // Secondary: by frequency
+        return (b.completionCount ?? 0).compareTo(a.completionCount ?? 0);
+      });
+    }
 
     // Group by energy
     final highEnergy = filtered.where((t) => t.energy.name == 'quick').toList();
@@ -764,9 +892,20 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
           const Spacer(),
           TextButton(
             onPressed: () {
-              // TODO: Shuffle favorites by energy
+              setState(() {
+                // Toggle sort order between "by energy" and "by frequency"
+                _favoritesSortDesc = !_favoritesSortDesc;
+              });
             },
-            child: const Text('Shuffle ↕'),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _favoritesSortDesc ? 'Most Done ↓' : 'Energy ↑',
+                  style: const TextStyle(fontFamily: 'Inter', fontSize: 12),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -799,7 +938,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
     );
   }
 
-  Widget _buildFavoriteItem(dynamic task, String energyType) {
+  Widget _buildFavoriteItem(Task task, String energyType) {
     final completionCount = task.completionCount ?? 0;
 
     return Card(
@@ -823,7 +962,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
                 'Done $completionCount times',
                 style: TextStyle(
                   fontSize: 11,
-                  color: Colors.grey.shade600,
+                  color: AppColors.grey600,
                 ),
               ),
             ],
@@ -874,7 +1013,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
     }
   }
 
-  void _showTaskDetail(dynamic task) {
+  void _showTaskDetail(Task task) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -918,7 +1057,14 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
                   child: OutlinedButton.icon(
                     onPressed: () {
                       Navigator.pop(context);
-                      // TODO: Add to today
+                      // Navigate to focus screen
+                      context.go('/focus');
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('"${task.title}" is in your Focus list'),
+                          backgroundColor: AppColors.teal,
+                        ),
+                      );
                     },
                     icon: AppIcon(AppIcons.add, size: 20),
                     label: const Text('Add to Today'),
@@ -929,7 +1075,12 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
                   child: ElevatedButton.icon(
                     onPressed: () {
                       Navigator.pop(context);
-                      // TODO: Start session
+                      ref.read(flowSessionProvider.notifier).startSession(
+                        SessionType.open,
+                        taskId: task.id,
+                        taskTitle: task.title,
+                      );
+                      context.go('/flow');
                     },
                     icon: AppIcon(AppIcons.play, size: 20),
                     label: const Text('Start Now'),
@@ -950,19 +1101,19 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
   // NOTES TAB — "Voice dump + reflection"
   // ============================================
   Widget _buildNotesTab() {
-    // For now, show session reflections as notes
-    // TODO: Implement full Note model with separate repository
-    final sessionsAsync = ref.watch(sessionRepositoryProvider);
+    final notesAsync = ref.watch(noteRepositoryProvider);
 
-    return sessionsAsync.when(
+    return notesAsync.when(
       data: (repo) {
-        final sessionsWithNotes = repo.getAll()
-            .where((s) => s.reflection != null && s.reflection!.isNotEmpty)
-            .where((s) =>
-              _searchQuery.isEmpty ||
-              (s.reflection?.toLowerCase().contains(_searchQuery.toLowerCase()) ?? false)
-            )
-            .toList();
+        var notes = repo.getAll().where((n) =>
+          _searchQuery.isEmpty ||
+          n.content.toLowerCase().contains(_searchQuery.toLowerCase())
+        ).toList();
+
+        // Apply tag filter
+        if (_selectedNoteTags.isNotEmpty) {
+          notes = notes.where((n) => n.tags.any((t) => _selectedNoteTags.contains(t))).toList();
+        }
 
         return Column(
           children: [
@@ -974,18 +1125,18 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
 
             // Notes list
             Expanded(
-              child: sessionsWithNotes.isEmpty
+              child: notes.isEmpty
                   ? _buildEmptyState(
                       icon: AppIcons.note,
                       title: 'No notes yet',
-                      subtitle: 'Add reflections after completing sessions',
+                      subtitle: 'Tap below to capture a quick note',
                     )
                   : ListView.builder(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                      itemCount: sessionsWithNotes.length,
+                      itemCount: notes.length,
                       itemBuilder: (context, index) {
-                        final session = sessionsWithNotes[index];
-                        return _buildNoteCard(session);
+                        final note = notes[index];
+                        return _buildNoteCard(note);
                       },
                     ),
             ),
@@ -1027,12 +1178,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
           ),
           const SizedBox(width: 8),
           IconButton(
-            onPressed: () {
-              // TODO: Voice capture
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Voice capture coming soon!')),
-              );
-            },
+            onPressed: () => _recordVoiceNote(),
             icon: Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -1047,10 +1193,135 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
     );
   }
 
-  void _showQuickNoteDialog() {
-    // TODO: Implement quick note creation
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Quick notes coming soon!')),
+  void _showQuickNoteDialog() async {
+    final contentController = TextEditingController();
+    final selectedTags = <String>{};
+
+    final result = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          padding: EdgeInsets.only(
+            left: 24,
+            right: 24,
+            top: 24,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Quick Note',
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  IconButton(
+                    icon: AppIcon(AppIcons.close, size: 24),
+                    onPressed: () => Navigator.pop(context, false),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: contentController,
+                decoration: InputDecoration(
+                  hintText: "What's on your mind?",
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                maxLines: 4,
+                autofocus: true,
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Tags',
+                style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.grey500),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: NoteTags.all.map((tag) =>
+                  FilterChip(
+                    label: Text(NoteTags.getLabel(tag)),
+                    selected: selectedTags.contains(tag),
+                    onSelected: (selected) {
+                      setDialogState(() {
+                        if (selected) {
+                          selectedTags.add(tag);
+                        } else {
+                          selectedTags.remove(tag);
+                        }
+                      });
+                    },
+                  ),
+                ).toList(),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.teal,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                  child: const Text('Save Note'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (result == true && contentController.text.trim().isNotEmpty && mounted) {
+      final repo = await ref.read(noteRepositoryProvider.future);
+      final note = Note.create(
+        content: contentController.text.trim(),
+        tags: selectedTags.toList(),
+      );
+      await repo.save(note);
+      setState(() {});
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Note saved!'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
+    }
+  }
+
+  void _recordVoiceNote() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _VoiceRecordSheet(
+        onSaved: (transcription) async {
+          final repo = await ref.read(noteRepositoryProvider.future);
+          final note = Note.create(
+            content: transcription,
+            tags: [],
+          );
+          await repo.save(note);
+          setState(() {});
+        },
+      ),
     );
   }
 
@@ -1064,9 +1335,15 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
             padding: const EdgeInsets.only(right: 8),
             child: FilterChip(
               label: Text(NoteTags.getLabel(tag)),
-              selected: false,
+              selected: _selectedNoteTags.contains(tag),
               onSelected: (selected) {
-                // TODO: Filter by tag
+                setState(() {
+                  if (selected) {
+                    _selectedNoteTags.add(tag);
+                  } else {
+                    _selectedNoteTags.remove(tag);
+                  }
+                });
               },
             ),
           ),
@@ -1075,7 +1352,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
     );
   }
 
-  Widget _buildNoteCard(FlowSession session) {
+  Widget _buildNoteCard(Note note) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
@@ -1086,38 +1363,54 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
             Row(
               children: [
                 Text(
-                  session.completedAt != null
-                      ? utils.DateUtils.formatDisplayDate(session.completedAt!)
-                      : 'Unknown date',
+                  utils.DateUtils.formatDisplayDate(note.createdAt),
                   style: TextStyle(
                     fontSize: 12,
-                    color: Colors.grey.shade600,
+                    color: AppColors.grey600,
                   ),
                 ),
                 const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: AppColors.teal.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(4),
+                if (note.isVoiceNote)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppColors.energyDeep.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        AppIcon(AppIcons.mic, size: 10, color: AppColors.energyDeep),
+                        const SizedBox(width: 4),
+                        const Text(
+                          'Voice',
+                          style: TextStyle(fontSize: 10, color: AppColors.energyDeep),
+                        ),
+                      ],
+                    ),
                   ),
-                  child: const Text(
-                    '💭 Reflection',
-                    style: TextStyle(fontSize: 10, color: AppColors.teal),
-                  ),
-                ),
               ],
             ),
             const SizedBox(height: 8),
-            Text(session.reflection!),
-            if (session.moodTag != null) ...[
+            Text(note.content),
+            if (note.tags.isNotEmpty) ...[
               const SizedBox(height: 8),
-              Text(
-                '${session.moodTag!.emoji} ${session.moodTag!.label}',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey.shade600,
-                ),
+              Wrap(
+                spacing: 4,
+                runSpacing: 4,
+                children: note.tags.map((tag) =>
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppColors.teal.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      NoteTags.getLabel(tag),
+                      style: const TextStyle(fontSize: 10, color: AppColors.teal),
+                    ),
+                  ),
+                ).toList(),
               ),
             ],
           ],
@@ -1186,7 +1479,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
     );
   }
 
-  Widget _buildBragStatsHeader(int total, int thisWeek, Map<String, int> byZone, List<dynamic> archivedTasks) {
+  Widget _buildBragStatsHeader(int total, int thisWeek, Map<String, int> byZone, List<Task> archivedTasks) {
     return Container(
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(16),
@@ -1260,33 +1553,86 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
     );
   }
 
-  void _exportBragDoc(List<dynamic> tasks) {
+  void _exportBragDoc(List<Task> tasks) async {
     final buffer = StringBuffer();
     buffer.writeln('FocusFlow Accomplishments');
     buffer.writeln('========================');
     buffer.writeln('');
     buffer.writeln('Total Tasks Completed: ${tasks.length}');
     buffer.writeln('');
-    buffer.writeln('Tasks:');
+
+    // Group by completion date
+    final byDate = <String, List<dynamic>>{};
     for (final task in tasks) {
-      buffer.writeln('- ${task.title}');
+      final dateKey = task.completedAt != null
+          ? utils.DateUtils.formatDisplayDate(task.completedAt!)
+          : 'Unknown date';
+      byDate.putIfAbsent(dateKey, () => []).add(task);
     }
 
-    // TODO: Copy to clipboard or share
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Brag doc copied to clipboard!')),
-    );
+    for (final entry in byDate.entries) {
+      buffer.writeln('\n${entry.key}:');
+      for (final task in entry.value) {
+        buffer.writeln('  ✓ ${task.title}');
+      }
+    }
+
+    // Copy to clipboard
+    try {
+      await Clipboard.setData(ClipboardData(text: buffer.toString()));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Brag doc copied! ${tasks.length} tasks exported.'),
+            backgroundColor: AppColors.success,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Export failed: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
   }
 
-  void _shareWin(int total, int thisWeek) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('🎉 I just completed $total tasks on FocusFlow this month, including $thisWeek this week! #ADHDProductivity'),
-      ),
-    );
+  void _shareBragDoc(String content) async {
+    try {
+      await share_plus.Share.share(content, subject: 'FocusFlow Accomplishments');
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Share failed: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
   }
 
-  Widget _buildArchiveItem(dynamic task) {
+  void _shareWin(int total, int thisWeek) async {
+    final message = '🎉 I just completed $total tasks on FocusFlow this month, including $thisWeek this week! #ADHDProductivity';
+    try {
+      await share_plus.Share.share(message);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Share failed: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  Widget _buildArchiveItem(Task task) {
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
@@ -1411,7 +1757,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
-          _buildFilterChip('All', true),
+          _buildFilterChip('All', true, () {}),
           _buildFilterChip('📄 Article', false, () {}),
           _buildFilterChip('🛠️ Tool', false, () {}),
           _buildFilterChip('🎥 Video', false, () {}),
@@ -1437,7 +1783,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
           resource.url,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+          style: TextStyle(color: AppColors.grey600, fontSize: 12),
         ),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
@@ -1449,8 +1795,34 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
               ),
             IconButton(
               icon: AppIcon(AppIcons.externalLink, size: 18),
-              onPressed: () {
-                // TODO: Open URL
+              onPressed: () async {
+                final uri = Uri.tryParse(resource.url);
+                if (uri == null) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Invalid URL'), backgroundColor: AppColors.error),
+                    );
+                  }
+                  return;
+                }
+                try {
+                  final canLaunch = await canLaunchUrl(uri);
+                  if (canLaunch) {
+                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  } else {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Could not open this link'), backgroundColor: AppColors.error),
+                      );
+                    }
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Error opening link: $e'), backgroundColor: AppColors.error),
+                    );
+                  }
+                }
               },
             ),
           ],
@@ -1467,7 +1839,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
       case ResourceCategory.tool:
         return AppColors.energyQuick;
       case ResourceCategory.video:
-        return const Color(0xFFE91E63);
+        return AppColors.categoryPink;
       case ResourceCategory.course:
         return AppColors.energyDeep;
     }
@@ -1518,7 +1890,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
               const SizedBox(height: 16),
               const Text(
                 'Notes',
-                style: TextStyle(fontWeight: FontWeight.w600, color: Colors.grey),
+                style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.grey500),
               ),
               const SizedBox(height: 8),
               Text(resource.notes!),
@@ -1528,10 +1900,22 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
               children: [
                 // Toggle read later
                 TextButton.icon(
-                  onPressed: () {
+                  onPressed: () async {
                     resource.readLaterQueue = !resource.readLaterQueue;
-                    // TODO: Save to repo
-                    Navigator.pop(context);
+                    // Save to repo
+                    final repo = await ref.read(resourceRepositoryProvider.future);
+                    await repo.save(resource);
+                    if (mounted) {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(resource.readLaterQueue
+                              ? '"${resource.title}" added to Read Later'
+                              : '"${resource.title}" removed from Read Later'),
+                          backgroundColor: AppColors.success,
+                        ),
+                      );
+                    }
                   },
                   icon: AppIcon(
                     resource.readLaterQueue ? AppIcons.bookmarkFilled : AppIcons.bookmarkOutline,
@@ -1546,9 +1930,35 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () {
-                  // TODO: Open URL
-                  Navigator.pop(context);
+                onPressed: () async {
+                  final uri = Uri.tryParse(resource.url);
+                  if (uri == null) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Invalid URL'), backgroundColor: AppColors.error),
+                      );
+                    }
+                    return;
+                  }
+                  try {
+                    final canLaunch = await canLaunchUrl(uri);
+                    if (canLaunch) {
+                      await launchUrl(uri, mode: LaunchMode.externalApplication);
+                      Navigator.pop(context);
+                    } else {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Could not open this link'), backgroundColor: AppColors.error),
+                        );
+                      }
+                    }
+                  } catch (e) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error),
+                      );
+                    }
+                  }
                 },
                 style: ElevatedButton.styleFrom(backgroundColor: AppColors.teal),
                 child: const Text('Open Link'),
@@ -1643,7 +2053,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          AppIcon(icon, size: 64, color: Colors.grey.shade300),
+          AppIcon(icon, size: 64, color: AppColors.grey300),
           const SizedBox(height: 16),
           Text(
             title,
@@ -1655,8 +2065,369 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
           const SizedBox(height: 8),
           Text(
             subtitle,
-            style: TextStyle(color: Colors.grey.shade600),
+            style: TextStyle(color: AppColors.grey600),
           ),
+        ],
+      ),
+    );
+  }
+
+  // ============================================
+  // ACHIEVEMENTS TAB
+  // ============================================
+  Widget _buildAchievementsTab() {
+    return const AchievementGalleryScreen();
+  }
+}
+
+// Voice recording sheet widget with real-time speech recognition
+class _VoiceRecordSheet extends StatefulWidget {
+  final Function(String transcription) onSaved;
+
+  const _VoiceRecordSheet({required this.onSaved});
+
+  @override
+  State<_VoiceRecordSheet> createState() => _VoiceRecordSheetState();
+}
+
+class _VoiceRecordSheetState extends State<_VoiceRecordSheet> {
+  final VoiceTranscriptionService _speechService = VoiceTranscriptionService.instance;
+  bool _isInitialized = false;
+  bool _isListening = false;
+  bool _hasPermission = false;
+  bool _showPermissionDenied = false;
+  String _transcription = '';
+  String _partialResult = '';
+  int _listeningSeconds = 0;
+  DateTime? _listeningStartTime;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkPermission();
+  }
+
+  @override
+  void dispose() {
+    _speechService.cancelListening();
+    super.dispose();
+  }
+
+  Future<void> _checkPermission() async {
+    // Request microphone permission
+    final status = await Permission.microphone.request();
+    if (!mounted) return;
+
+    setState(() {
+      _hasPermission = status.isGranted;
+      _showPermissionDenied = status.isDenied || status.isPermanentlyDenied;
+    });
+
+    if (_hasPermission) {
+      await _initializeSpeechService();
+    }
+  }
+
+  Future<void> _initializeSpeechService() async {
+    final success = await _speechService.initialize();
+    if (mounted) {
+      setState(() {
+        _isInitialized = success;
+        if (!success) {
+          _showPermissionDenied = true;
+        }
+      });
+    }
+  }
+
+  Future<void> _openAppSettings() async {
+    await openAppSettings();
+  }
+
+  Future<void> _startListening() async {
+    if (!_isInitialized) {
+      await _initializeSpeechService();
+      if (!_isInitialized) return;
+    }
+
+    if (_isListening) return;
+
+    setState(() {
+      _isListening = true;
+      _listeningSeconds = 0;
+      _listeningStartTime = DateTime.now();
+      _partialResult = '';
+    });
+
+    final started = await _speechService.startListening(
+      onResult: (String result) {
+        if (mounted) {
+          setState(() {
+            _transcription = result;
+            _partialResult = '';
+          });
+        }
+      },
+      onPartialResult: (String partial) {
+        if (mounted) {
+          setState(() {
+            _partialResult = partial;
+          });
+        }
+      },
+      onListeningComplete: () {
+        if (mounted) {
+          setState(() {
+            _isListening = false;
+          });
+        }
+      },
+    );
+
+    if (!started && mounted) {
+      setState(() {
+        _isListening = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not start speech recognition'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    // Update timer
+    _updateTimer();
+
+    // Auto-stop at 60 seconds
+    Future.delayed(const Duration(seconds: 60), () {
+      if (_isListening && mounted) {
+        _stopListening();
+      }
+    });
+  }
+
+  void _updateTimer() {
+    if (!_isListening) return;
+
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (_isListening && mounted) {
+        setState(() {
+          _listeningSeconds = DateTime.now().difference(_listeningStartTime!).inSeconds;
+        });
+        _updateTimer();
+      }
+    });
+  }
+
+  Future<void> _stopListening() async {
+    if (!_isListening) return;
+
+    await _speechService.stopListening();
+    if (mounted) {
+      setState(() {
+        _isListening = false;
+        // Finalize partial result
+        if (_partialResult.isNotEmpty && _transcription.isEmpty) {
+          _transcription = _partialResult;
+          _partialResult = '';
+        }
+      });
+    }
+  }
+
+  String _formatTime(int seconds) {
+    final mins = seconds ~/ 60;
+    final secs = seconds % 60;
+    return '${mins.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Voice Note',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              IconButton(
+                icon: AppIcon(AppIcons.close, size: 24),
+                onPressed: () => Navigator.pop(context, false),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          // Permission denied view
+          if (_showPermissionDenied) ...[
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.error.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                children: [
+                  const Icon(Icons.mic_off, size: 48, color: AppColors.error),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Microphone permission required',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Please grant microphone access to record voice notes.',
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: _openAppSettings,
+                    child: const Text('Open Settings'),
+                  ),
+                ],
+              ),
+            ),
+          ] else ...[
+            // Listening button
+            GestureDetector(
+              onTap: _isListening ? _stopListening : _startListening,
+              child: Container(
+                width: 120,
+                height: 120,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: _isListening ? Colors.red : AppColors.energyDeep.withOpacity(0.2),
+                ),
+                child: Center(
+                  child: _isListening
+                      ? const Icon(Icons.stop, size: 48, color: Colors.white)
+                      : AppIcon(AppIcons.mic, size: 48, color: AppColors.energyDeep),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            // Timer/status display
+            Text(
+              _isListening
+                  ? '${_formatTime(_listeningSeconds)} / 01:00'
+                  : 'Tap to speak',
+              style: TextStyle(
+                fontSize: 16,
+                color: AppColors.grey600,
+              ),
+            ),
+          ],
+          // Live transcription preview
+          if (_isListening && (_transcription.isNotEmpty || _partialResult.isNotEmpty)) ...[
+            const SizedBox(height: 24),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.grey100,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: const BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'Live',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.red,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  if (_transcription.isNotEmpty)
+                    Text(
+                      _transcription,
+                      style: const TextStyle(fontSize: 14),
+                    ),
+                  if (_partialResult.isNotEmpty)
+                    Text(
+                      _partialResult,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: AppColors.grey600,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+          // Final transcription
+          if (!_isListening && _transcription.isNotEmpty) ...[
+            const SizedBox(height: 24),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.grey100,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                _transcription,
+                style: const TextStyle(fontSize: 14),
+              ),
+            ),
+          ],
+          const SizedBox(height: 24),
+          if (_transcription.isNotEmpty) ...[
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () {
+                      setState(() {
+                        _transcription = '';
+                        _partialResult = '';
+                      });
+                    },
+                    child: const Text('Clear'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      await widget.onSaved(_transcription);
+                      if (mounted) Navigator.pop(context, true);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.success,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                    child: const Text('Save Note'),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );

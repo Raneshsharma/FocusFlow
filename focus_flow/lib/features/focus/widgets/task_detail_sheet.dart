@@ -137,7 +137,7 @@ class _TaskDetailSheetState extends ConsumerState<TaskDetailSheet> {
               title: const Text('Favorite'),
               secondary: AppIcon(
                 _isFavorite ? AppIcons.starFilled : AppIcons.starOutline,
-                color: _isFavorite ? AppColors.amber : Colors.grey,
+                color: _isFavorite ? AppColors.amber : AppColors.grey500,
                 size: 24,
               ),
               value: _isFavorite,
@@ -220,7 +220,7 @@ class _TaskDetailSheetState extends ConsumerState<TaskDetailSheet> {
       case EnergyLevel.low:
         return AppColors.energyLow;
       case EnergyLevel.none:
-        return Colors.grey;
+        return AppColors.grey500;
     }
   }
 
@@ -249,10 +249,9 @@ class _TaskDetailSheetState extends ConsumerState<TaskDetailSheet> {
     ref.read(tasksProvider.notifier).updateTask(widget.task);
   }
 
-  void _completeTask() async {
+  void _completeTask() {
     ref.read(tasksProvider.notifier).completeTask(widget.task.id);
-    final statsRepo = await ref.read(statsRepositoryProvider.future);
-    await statsRepo.incrementTasksCompleted(DateTime.now());
+    // Note: completeTask already increments stats internally
     if (mounted) Navigator.pop(context);
   }
 

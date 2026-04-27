@@ -51,8 +51,8 @@ class DailySummary extends ConsumerWidget {
                       loading: () => 'Loading...',
                       error: (_, __) => 'Start your day!',
                     ),
-                    style: TextStyle(
-                      color: Colors.grey.shade600,
+                    style: const TextStyle(
+                      color: AppColors.grey600,
                     ),
                   ),
                 ],
