@@ -90,6 +90,12 @@ class TaskItem extends ConsumerWidget {
 
   Widget _buildTaskCard(BuildContext context, WidgetRef ref) {
     return Card(
+      elevation: 0,
+      color: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: const BorderSide(color: AppColors.grey200, width: 1),
+      ),
       child: InkWell(
         onTap: () => _showTaskDetails(context),
         onLongPress: () => _showZonePicker(context, ref),
@@ -107,7 +113,7 @@ class TaskItem extends ConsumerWidget {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: task.completed ? AppColors.success : AppColors.grey500,
+                      color: task.completed ? AppColors.success : AppColors.navy,
                       width: 2,
                     ),
                     color: task.completed ? AppColors.success : Colors.transparent,
@@ -129,9 +135,9 @@ class TaskItem extends ConsumerWidget {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 16,
-                        fontWeight: task.priority == Priority.high ? FontWeight.bold : FontWeight.w500,
+                        fontWeight: task.priority == Priority.high ? FontWeight.bold : FontWeight.w600,
                         decoration: task.completed ? TextDecoration.lineThrough : null,
-                        color: task.completed ? AppColors.grey500 : null,
+                        color: task.completed ? AppColors.grey500 : AppColors.navy,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -386,12 +392,6 @@ class TaskItem extends ConsumerWidget {
   void _completeTask(BuildContext context, WidgetRef ref) async {
     HapticFeedback.mediumImpact();
     await ref.read(tasksProvider.notifier).completeTask(task.id);
-    try {
-      final repo = await ref.read(statsRepositoryProvider.future);
-      await repo.incrementTasksCompleted(DateTime.now());
-    } catch (_) {
-      // Stats update is non-critical, continue silently
-    }
     onComplete?.call();
 
     if (context.mounted) {

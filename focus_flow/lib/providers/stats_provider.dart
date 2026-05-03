@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/models/daily_stats.dart';
 import '../core/utils/streak_calculator.dart' as calculator;
+import '../core/utils/date_helpers.dart';
 import '../services/streak_service.dart';
 import 'providers.dart';
 
@@ -24,7 +26,8 @@ class TodayStatsNotifier extends AsyncNotifier<DailyStats?> {
     try {
       final repo = await ref.read(statsRepositoryProvider.future);
       return repo.getByDate(DateTime.now());
-    } catch (e) {
+    } catch (e, st) {
+      debugPrint('TodayStatsNotifier.build: $e\n$st');
       return null;
     }
   }
@@ -60,15 +63,11 @@ class TodayStatsNotifier extends AsyncNotifier<DailyStats?> {
 final getTodayStatsProvider = FutureProvider<DailyStats>((ref) async {
   final statsAsync = ref.watch(todayStatsProvider);
   return statsAsync.when(
-    data: (stats) => stats ?? DailyStats.create(date: _formatDate(DateTime.now())),
-    loading: () => DailyStats.create(date: _formatDate(DateTime.now())),
-    error: (_, __) => DailyStats.create(date: _formatDate(DateTime.now())),
+    data: (stats) => stats ?? DailyStats.create(date: formatDateKey(DateTime.now())),
+    loading: () => DailyStats.create(date: formatDateKey(DateTime.now())),
+    error: (_, __) => DailyStats.create(date: formatDateKey(DateTime.now())),
   );
 });
-
-String _formatDate(DateTime date) {
-  return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
-}
 
 final streakProvider = FutureProvider<calculator.StreakResult>((ref) async {
   final repoAsync = ref.watch(statsRepositoryProvider);
@@ -95,6 +94,34 @@ final completedTasksCountProvider = Provider<int>((ref) {
   final tasksAsync = ref.watch(tasksProvider);
   return tasksAsync.when(
     data: (tasks) => tasks.where((t) => t.completed).length,
+    loading: () => 0,
+    error: (_, __) => 0,
+  );
+});
+
+// Settings screen specific providers
+final settingsStreakProvider = FutureProvider<int>((ref) async {
+  final repoAsync = ref.watch(statsRepositoryProvider);
+  return repoAsync.when(
+    data: (repo) => repo.getCurrentStreak(),
+    loading: () => 0,
+    error: (_, __) => 0,
+  );
+});
+
+final settingsTotalSessionsProvider = FutureProvider<int>((ref) async {
+  final repoAsync = ref.watch(sessionRepositoryProvider);
+  return repoAsync.when(
+    data: (repo) => repo.getAll().length,
+    loading: () => 0,
+    error: (_, __) => 0,
+  );
+});
+
+final settingsTotalFocusMinutesProvider = FutureProvider<int>((ref) async {
+  final repoAsync = ref.watch(sessionRepositoryProvider);
+  return repoAsync.when(
+    data: (repo) => repo.getTotalFocusMinutes(),
     loading: () => 0,
     error: (_, __) => 0,
   );

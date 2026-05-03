@@ -10,7 +10,7 @@ class StreakCalculator {
 
     final uniqueDays = <String>{};
     for (final date in sorted) {
-      uniqueDays.add('${date.year}-${date.month}-${date.day}');
+      uniqueDays.add('${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}');
     }
 
     final sortedUnique = uniqueDays.toList()..sort((a, b) => b.compareTo(a));

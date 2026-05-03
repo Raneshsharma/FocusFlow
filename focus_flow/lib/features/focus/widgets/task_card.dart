@@ -75,8 +75,12 @@ class TaskCard extends ConsumerWidget {
               GestureDetector(
                 onTap: () async {
                   if (!task.completed) {
-                    final tasksNotifier = ref.read(tasksProvider.notifier);
-                    await tasksNotifier.completeTask(task.id);
+                    try {
+                      final tasksNotifier = ref.read(tasksProvider.notifier);
+                      await tasksNotifier.completeTask(task.id);
+                    } catch (e) {
+                      debugPrint('TaskCard: Error completing task: $e');
+                    }
                   }
                 },
                 child: Container(

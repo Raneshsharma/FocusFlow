@@ -25,14 +25,14 @@ class AdaptiveRestCard extends ConsumerWidget {
             gradient: LinearGradient(
               colors: [
                 recommendation.color.withOpacity(0.15),
-                recommendation.color.withOpacity(0.05),
+                recommendation.color.withOpacity(0.08),
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: recommendation.color.withOpacity(0.3),
+              color: recommendation.color.withOpacity(0.25),
               width: 1,
             ),
           ),
@@ -55,47 +55,52 @@ class AdaptiveRestCard extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: recommendation.color.withOpacity(0.15),
+                        color: recommendation.color.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
                         recommendation.label,
                         style: TextStyle(
+                          fontFamily: 'Inter',
                           fontSize: 10,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w700,
                           color: recommendation.color,
+                          letterSpacing: 0.5,
                         ),
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 8),
                     Text(
                       recommendation.title,
                       style: const TextStyle(
                         fontFamily: 'Montserrat',
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.navy,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
                       ),
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 4),
                     Text(
                       recommendation.description,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontFamily: 'Inter',
-                        fontSize: 12,
-                        color: AppColors.grey600,
+                        fontSize: 13,
+                        color: Colors.white70,
+                        height: 1.3,
                       ),
                     ),
                   ],
                 ),
               ),
               const SizedBox(width: 8),
-              Icon(
-                recommendation.icon,
-                color: recommendation.color,
-                size: 24,
+              Text(
+                recommendation.iconEmoji,
+                style: TextStyle(
+                  fontSize: 24,
+                  color: recommendation.color,
+                ),
               ),
             ],
           ),
@@ -110,7 +115,7 @@ class AdaptiveRestCard extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.grey100,
+        color: Colors.white.withOpacity(0.06),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
@@ -119,7 +124,7 @@ class AdaptiveRestCard extends ConsumerWidget {
             width: 56,
             height: 56,
             decoration: BoxDecoration(
-              color: AppColors.grey200,
+              color: Colors.white.withOpacity(0.1),
               borderRadius: BorderRadius.circular(14),
             ),
           ),
@@ -132,7 +137,7 @@ class AdaptiveRestCard extends ConsumerWidget {
                   width: 60,
                   height: 14,
                   decoration: BoxDecoration(
-                    color: AppColors.grey200,
+                    color: Colors.white.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -141,7 +146,7 @@ class AdaptiveRestCard extends ConsumerWidget {
                   width: double.infinity,
                   height: 16,
                   decoration: BoxDecoration(
-                    color: AppColors.grey200,
+                    color: Colors.white.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -150,7 +155,7 @@ class AdaptiveRestCard extends ConsumerWidget {
                   width: 150,
                   height: 12,
                   decoration: BoxDecoration(
-                    color: AppColors.grey200,
+                    color: Colors.white.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -166,7 +171,12 @@ class AdaptiveRestCard extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.teal.withOpacity(0.1),
+        gradient: LinearGradient(
+          colors: [
+            AppColors.teal.withOpacity(0.15),
+            AppColors.teal.withOpacity(0.08),
+          ],
+        ),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.teal.withOpacity(0.2)),
       ),
@@ -182,15 +192,19 @@ class AdaptiveRestCard extends ConsumerWidget {
                   'Take a mindful moment',
                   style: TextStyle(
                     fontFamily: 'Montserrat',
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.navy,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
                   ),
                 ),
-                SizedBox(height: 2),
+                SizedBox(height: 4),
                 Text(
                   'Start your first session to get personalized recommendations',
-                  style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: AppColors.grey500),
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 13,
+                    color: Colors.white70,
+                  ),
                 ),
               ],
             ),
@@ -205,7 +219,6 @@ class AdaptiveRestCard extends ConsumerWidget {
     required int focusMinutes,
     required int currentHour,
   }) {
-    // Heavy session day - needs deep recovery
     if (sessions >= 5 || focusMinutes >= 120) {
       if (currentHour >= 18) {
         return _BreakRecommendation(
@@ -214,7 +227,7 @@ class AdaptiveRestCard extends ConsumerWidget {
           title: 'Time to wind down',
           description: 'You\'ve had a productive day. Prepare for restful sleep.',
           color: Colors.indigo,
-          icon: Icons.nightlight_round,
+          iconEmoji: '🌙',
         );
       }
       return _BreakRecommendation(
@@ -223,11 +236,10 @@ class AdaptiveRestCard extends ConsumerWidget {
         title: 'You earned a real break',
         description: 'Multiple sessions today. Take it easy.',
         color: AppColors.purple,
-        icon: Icons.weekend,
+        iconEmoji: '🛋️',
       );
     }
 
-    // Moderate session - suggest engaging break
     if (sessions >= 2 || focusMinutes >= 30) {
       if (currentHour >= 14 && currentHour < 17) {
         return _BreakRecommendation(
@@ -235,8 +247,8 @@ class AdaptiveRestCard extends ConsumerWidget {
           label: 'GET MOVING',
           title: 'Take a walk',
           description: 'Break up the afternoon slump with fresh air.',
-          color: Colors.green,
-          icon: Icons.directions_walk,
+          color: AppColors.success,
+          iconEmoji: '🚶',
         );
       }
       return _BreakRecommendation(
@@ -244,24 +256,22 @@ class AdaptiveRestCard extends ConsumerWidget {
         label: 'RECHARGE',
         title: 'Coffee break',
         description: 'A short break to recharge between sessions.',
-        color: Colors.brown,
-        icon: Icons.coffee,
+        color: AppColors.brown,
+        iconEmoji: '☕',
       );
     }
 
-    // Light day - quick recovery
     if (sessions >= 1) {
       return _BreakRecommendation(
         emoji: '👀',
         label: 'REST YOUR EYES',
         title: 'Look away from the screen',
         description: 'Quick eye break to reduce strain.',
-        color: Colors.blue,
-        icon: Icons.visibility_off,
+        color: AppColors.energyLow,
+        iconEmoji: '👁',
       );
     }
 
-    // Early in day - energizing break
     if (currentHour < 10) {
       return _BreakRecommendation(
         emoji: '💧',
@@ -269,18 +279,17 @@ class AdaptiveRestCard extends ConsumerWidget {
         title: 'Start with water',
         description: 'Hydration first thing helps focus.',
         color: Colors.cyan,
-        icon: Icons.water_drop,
+        iconEmoji: '💧',
       );
     }
 
-    // Default
     return _BreakRecommendation(
       emoji: '🧘',
       label: 'MINDFUL MOMENT',
       title: 'Breathe and reset',
       description: 'A quick breathing exercise to center yourself.',
       color: AppColors.teal,
-      icon: Icons.self_improvement,
+      iconEmoji: '🧘',
     );
   }
 }
@@ -291,7 +300,7 @@ class _BreakRecommendation {
   final String title;
   final String description;
   final Color color;
-  final IconData icon;
+  final String iconEmoji;
 
   const _BreakRecommendation({
     required this.emoji,
@@ -299,6 +308,6 @@ class _BreakRecommendation {
     required this.title,
     required this.description,
     required this.color,
-    required this.icon,
+    required this.iconEmoji,
   });
 }

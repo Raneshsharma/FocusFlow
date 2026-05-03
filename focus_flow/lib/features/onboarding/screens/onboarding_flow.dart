@@ -17,11 +17,18 @@ class OnboardingFlow extends ConsumerStatefulWidget {
 
 class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
   int _currentPage = 0;
-  bool _isNavigating = false;
+  DateTime? _lastNavTime;
+  static const _navCooldown = Duration(milliseconds: 500);
 
   void _goToPage(int page) {
-    if (_isNavigating) return;
     if (page < 0 || page > 3) return;
+
+    // Debounce rapid taps
+    final now = DateTime.now();
+    if (_lastNavTime != null && now.difference(_lastNavTime!) < _navCooldown) {
+      return;
+    }
+    _lastNavTime = now;
 
     setState(() {
       _currentPage = page;
@@ -49,18 +56,19 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
   }
 
   void _navigateToToday() {
-    Navigator.of(context).pop(); // Close bottom sheet if open
-    context.go('/focus');
+    // Use context.go with replace to skip redirect checks
+    context.go('/flow');
   }
 
   Future<void> _skipOnboarding() async {
-    if (_isNavigating) return;
-    _isNavigating = true;
-
+    // Mark onboarding as complete in storage
     await ref.read(onboardingProvider.notifier).completeOnboarding();
-    if (mounted) {
-      _navigateToToday();
-    }
+
+    if (!mounted) return;
+
+    // Use pushReplacement to replace onboarding entirely
+    // This avoids any redirect logic interference
+    GoRouter.of(context).pushReplacement('/flow');
   }
 
   @override

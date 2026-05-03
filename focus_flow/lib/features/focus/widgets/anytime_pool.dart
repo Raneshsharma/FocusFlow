@@ -141,10 +141,12 @@ class _AnytimePoolState extends State<AnytimePool> {
                   ),
                   const SizedBox(width: 6),
                   // Expand arrow
-                  Icon(
-                    _isExpanded ? Icons.expand_less : Icons.expand_more,
-                    size: 22,
-                    color: AppColors.grey500,
+                  Text(
+                    _isExpanded ? '⌃' : '⌄',
+                    style: TextStyle(
+                      fontSize: 22,
+                      color: AppColors.grey500,
+                    ),
                   ),
                 ],
               ),
@@ -215,13 +217,22 @@ class _AnytimePoolState extends State<AnytimePool> {
 
   Widget _buildEmptyState() {
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 24),
       decoration: BoxDecoration(
-        color: AppColors.grey50,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: AppColors.grey200.withOpacity(0.5),
+          color: AppColors.grey200,
+          width: 1.5,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -233,7 +244,7 @@ class _AnytimePoolState extends State<AnytimePool> {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: AppColors.teal.withOpacity(0.08),
+                color: AppColors.teal.withOpacity(0.12),
                 shape: BoxShape.circle,
               ),
               child: Center(
@@ -242,7 +253,7 @@ class _AnytimePoolState extends State<AnytimePool> {
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.teal.withOpacity(0.6),
+                    color: AppColors.teal,
                   ),
                 ),
               ),
@@ -255,17 +266,17 @@ class _AnytimePoolState extends State<AnytimePool> {
               fontFamily: 'Inter',
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: AppColors.grey700,
+              color: AppColors.navy,
             ),
           ),
           const SizedBox(height: 4),
-          const Text(
+          Text(
             'Add tasks to any zone or create new ones',
             style: TextStyle(
               fontFamily: 'Inter',
               fontSize: 12,
-              fontWeight: FontWeight.w400,
-              color: AppColors.grey500,
+              fontWeight: FontWeight.w500,
+              color: AppColors.grey600,
             ),
           ),
         ],

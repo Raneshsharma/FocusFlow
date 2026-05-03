@@ -9,27 +9,23 @@ import '../../features/library/screens/weekly_insights_screen.dart';
 import '../../features/settings/screens/settings_screen.dart';
 import '../../features/onboarding/screens/onboarding_flow.dart';
 import '../../features/onboarding/providers/onboarding_provider.dart';
+import '../../providers/providers.dart';
 import '../widgets/main_shell.dart';
 
-// Router state provider - tracks if onboarding is complete
-final routerInitializedProvider = StateProvider<bool>((ref) => false);
-
 final appRouterProvider = Provider<GoRouter>((ref) {
-  // Watch onboarding state
-  final onboardingState = ref.watch(onboardingProvider);
-
-  // Mark as initialized once we've loaded state
-  if (!ref.read(routerInitializedProvider) && onboardingState.hasCompletedOnboarding == false) {
-    // Check if settings have been loaded (not just default)
-    Future.microtask(() {
-      ref.read(routerInitializedProvider.notifier).state = true;
-    });
-  }
-
   return GoRouter(
-    initialLocation: onboardingState.hasCompletedOnboarding ? '/focus' : '/onboarding',
-    redirect: (context, state) {
-      // Handle redirect based on onboarding state
+    initialLocation: '/focus',
+    redirect: (context, state) async {
+      // IMPORTANT: Wait for onboarding state to be initialized before making redirect decisions
+      // This prevents the app from always showing onboarding on restart
+      await ref.read(onboardingProvider.notifier).ensureInitialized();
+      final onboardingState = ref.read(onboardingProvider);
+
+      // Don't redirect while still loading (prevents flash of onboarding on every app start)
+      if (onboardingState.isLoading) {
+        return null;
+      }
+
       final isOnboarding = state.uri.path == '/onboarding';
 
       // If onboarding not completed and we're not on onboarding page, redirect to onboarding
@@ -90,6 +86,43 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           child: WeeklyInsightsScreen(),
         ),
       ),
+      GoRoute(
+        path: '/404',
+        builder: (context, state) => Scaffold(
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text('404', style: TextStyle(fontSize: 48, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 16),
+                const Text('Page not found'),
+                const SizedBox(height: 24),
+                ElevatedButton(
+                  onPressed: () => context.go('/focus'),
+                  child: const Text('Go Home'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     ],
+    errorBuilder: (context, state) => Scaffold(
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text('404', style: TextStyle(fontSize: 48, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 16),
+            const Text('Page not found'),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: () => context.go('/focus'),
+              child: const Text('Go Home'),
+            ),
+          ],
+        ),
+      ),
+    ),
   );
 });

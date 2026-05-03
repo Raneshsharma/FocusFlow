@@ -141,10 +141,13 @@ class _TaskCompletionCelebrationState extends State<TaskCompletionCelebration> {
                     ),
                   ],
                 ),
-                child: const Icon(
-                  Icons.check,
-                  color: Colors.white,
-                  size: 56,
+                child: const Text(
+                  '✓',
+                  style: TextStyle(
+                    fontSize: 56,
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               )
                   .animate()
@@ -180,10 +183,9 @@ class _TaskCompletionCelebrationState extends State<TaskCompletionCelebration> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(
-                      Icons.star,
-                      color: AppColors.amber,
-                      size: 24,
+                    const Text(
+                      '★',
+                      style: TextStyle(fontSize: 24, color: AppColors.amber),
                     ),
                     const SizedBox(width: 8),
                     Text(

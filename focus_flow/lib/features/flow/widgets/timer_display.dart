@@ -20,8 +20,12 @@ class TimerDisplay extends StatelessWidget {
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final timerSize = (screenWidth * 0.75).clamp(200.0, 280.0);
+    // For Quick Win (open session), show elapsed time. For Pomodoro/Deep Work/Custom, show remaining countdown
+    final isElapsedDisplay = sessionType == SessionType.open;
     final progress = totalSeconds > 0 ? (elapsedSeconds / totalSeconds).clamp(0.0, 1.0) : 0.0;
-    final remaining = totalSeconds > 0 ? (totalSeconds - elapsedSeconds).clamp(0, totalSeconds) : 0;
+    final displaySeconds = isElapsedDisplay
+        ? elapsedSeconds  // Show elapsed time for Quick Win only
+        : (totalSeconds > 0 ? (totalSeconds - elapsedSeconds).clamp(0, totalSeconds) : 0);
 
     return SizedBox(
       width: timerSize,
@@ -59,7 +63,7 @@ class TimerDisplay extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                _formatTime(remaining),
+                _formatTime(displaySeconds),
                 style: TextStyle(
                   fontSize: timerSize * 0.2,
                   fontWeight: FontWeight.bold,
@@ -105,6 +109,8 @@ class TimerDisplay extends StatelessWidget {
         return 'Focus Time';
       case SessionType.deep:
         return 'Deep Work';
+      case SessionType.custom:
+        return 'Custom Timer';
     }
   }
 }

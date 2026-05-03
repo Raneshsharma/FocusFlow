@@ -123,10 +123,9 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
                     color: AppColors.grey100,
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: const Icon(
-                    Icons.close,
-                    size: 18,
-                    color: AppColors.grey600,
+                  child: const Text(
+                    '✕',
+                    style: TextStyle(fontSize: 18),
                   ),
                 ),
               ),
@@ -243,6 +242,7 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
                   ),
                   child: const Row(
                     mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Text(
                         'Next',
@@ -254,10 +254,11 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
                         ),
                       ),
                       SizedBox(width: 8),
-                      Icon(
-                        Icons.arrow_forward,
-                        color: Colors.white,
-                        size: 20,
+                      Center(
+                        child: Text(
+                          '→',
+                          style: TextStyle(fontSize: 20, color: Colors.white),
+                        ),
                       ),
                     ],
                   ),
@@ -277,6 +278,85 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Title preview with edit option
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.grey50,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.grey200, width: 1),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Task',
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.grey500,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _titleController.text.isEmpty ? 'No title' : _titleController.text,
+                        style: const TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.navy,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                GestureDetector(
+                  onTap: () {
+                    _pageController.previousPage(
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                    );
+                    setState(() => _currentStep = 0);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: AppColors.teal.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '✏️',
+                          style: TextStyle(fontSize: 12, color: AppColors.teal),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Edit',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.teal,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+
           // Energy Level Section
           const Text(
             'Energy Needed',
@@ -536,7 +616,11 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
       priority: _selectedPriority,
       tags: _tagsController.text
           .split(',')
-          .map((t) => t.trim())
+          .map((t) {
+            final trimmed = t.trim();
+            // Remove leading # if present to avoid ##tag display
+            return trimmed.startsWith('#') ? trimmed.substring(1) : trimmed;
+          })
           .where((t) => t.isNotEmpty)
           .toList(),
       estimatedMinutes: _estimatedMinutes,

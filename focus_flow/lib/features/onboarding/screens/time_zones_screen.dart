@@ -14,9 +14,9 @@ class TimeZonesScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final currentZone = _getCurrentZone();
 
-    return Scaffold(
-      backgroundColor: AppColors.white,
-      body: SafeArea(
+    return Container(
+      color: AppColors.white,
+      child: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
             final isTablet = constraints.maxWidth >= ResponsiveBreakpoints.tablet;

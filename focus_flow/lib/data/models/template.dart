@@ -89,7 +89,7 @@ class Template {
 
   factory Template.fromJson(Map<String, dynamic> json) {
     TimeOfDay? tod;
-    if (json['bestTimeOfDay'] != null) {
+    if (json['bestTimeOfDay'] is Map) {
       tod = TimeOfDay(
         hour: json['bestTimeOfDay']['hour'] ?? 0,
         minute: json['bestTimeOfDay']['minute'] ?? 0,
@@ -100,7 +100,7 @@ class Template {
       id: json['id'],
       name: json['name'],
       taskIds: List<String>.from(json['taskIds'] ?? []),
-      zone: TimeZone.values[json['zone'] ?? 0],
+      zone: _safeEnum(TimeZone.values, json['zone'] ?? 0, TimeZone.anytime),
       createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt']) : DateTime.now(),
       usageCount: json['usageCount'] ?? 0,
       bestTimeOfDay: tod,
@@ -108,4 +108,8 @@ class Template {
       lastUsed: json['lastUsed'] != null ? DateTime.parse(json['lastUsed']) : null,
     );
   }
+
+static T _safeEnum<T>(List<T> values, int index, T fallback) {
+  return (index >= 0 && index < values.length) ? values[index] : fallback;
+}
 }

@@ -20,7 +20,29 @@ class FocusScreen extends ConsumerWidget {
 
     return tasksAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Error: $e')),
+      error: (e, _) => Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, size: 48, color: AppColors.error),
+            const SizedBox(height: 16),
+            Text(
+              'Failed to load tasks',
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: AppColors.grey700,
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: () => ref.invalidate(tasksProvider),
+              child: const Text('Tap to retry'),
+            ),
+          ],
+        ),
+      ),
       data: (tasks) {
         final incomplete = tasks.where((t) => !t.completed).toList();
         final anytime = incomplete.where((t) => t.zone == TimeZone.anytime).toList();
@@ -100,11 +122,14 @@ class FocusScreen extends ConsumerWidget {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: const Icon(
-                Icons.add,
-                color: AppColors.deepSlate,
-                size: 26,
-              ),
+              child: const Text(
+                        '+',
+                        style: TextStyle(
+                          fontSize: 26,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.deepSlate,
+                        ),
+                      ),
             ),
           ),
         );
@@ -176,10 +201,9 @@ class FocusScreen extends ConsumerWidget {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: const [
-                          Icon(
-                            Icons.gps_fixed,
-                            color: AppColors.amber,
-                            size: 16,
+                          const Text(
+                            '📍',
+                            style: TextStyle(fontSize: 16),
                           ),
                           SizedBox(width: 6),
                           Text(
@@ -198,7 +222,7 @@ class FocusScreen extends ConsumerWidget {
                   const SizedBox(width: 8),
                   // Insights button
                   GestureDetector(
-                    onTap: () => context.go('/insights'),
+                    onTap: () => context.push('/insights'),
                     child: Container(
                       width: 36,
                       height: 36,
@@ -214,7 +238,7 @@ class FocusScreen extends ConsumerWidget {
                   const SizedBox(width: 8),
                   // Settings button
                   GestureDetector(
-                    onTap: () => context.go('/settings'),
+                    onTap: () => context.push('/settings'),
                     child: Container(
                       width: 36,
                       height: 36,

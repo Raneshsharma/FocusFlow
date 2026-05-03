@@ -76,8 +76,12 @@ class Resource {
     title: json['title'],
     url: json['url'],
     createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt']) : DateTime.now(),
-    category: ResourceCategory.values[json['category'] ?? 0],
+    category: _safeEnum(ResourceCategory.values, json['category'] ?? 0, ResourceCategory.article),
     notes: json['notes'],
     readLaterQueue: json['readLaterQueue'] ?? false,
   );
+
+static T _safeEnum<T>(List<T> values, int index, T fallback) {
+  return (index >= 0 && index < values.length) ? values[index] : fallback;
+}
 }

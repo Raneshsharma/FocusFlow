@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../providers/settings_provider.dart';
+import '../providers/onboarding_provider.dart';
 
 class OnboardingEnergyTaskScreen extends ConsumerWidget {
   final VoidCallback? onContinue;
@@ -11,9 +11,9 @@ class OnboardingEnergyTaskScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Scaffold(
-      backgroundColor: AppColors.surface,
-      body: SafeArea(
+    return Container(
+      color: AppColors.surface,
+      child: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
           child: Column(
@@ -201,7 +201,7 @@ class OnboardingEnergyTaskScreen extends ConsumerWidget {
   }
 
   void _completeOnboarding(BuildContext context, WidgetRef ref) async {
-    await ref.read(appSettingsProvider.notifier).setOnboardingCompleted(true);
+    await ref.read(onboardingProvider.notifier).completeOnboarding();
 
     if (context.mounted) {
       context.go('/focus');

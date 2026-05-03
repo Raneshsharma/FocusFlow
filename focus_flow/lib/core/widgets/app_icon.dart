@@ -70,6 +70,7 @@ class AppIcons {
   static const target = '◎';
   static const archive = '📦';
   static const link = '🔗';
+  static const task = '📋';
 
   // Navigation / Status
   static const flashOn = '⚡';

@@ -39,6 +39,7 @@ class SettingsActionTile extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 12),
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Container(
                     width: 40,
@@ -55,6 +56,7 @@ class SettingsActionTile extends StatelessWidget {
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
                           title,

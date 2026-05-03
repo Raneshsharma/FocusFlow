@@ -20,15 +20,15 @@ class WeeklySummaryCard extends ConsumerWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            AppColors.teal.withOpacity(0.15),
-            AppColors.purple.withOpacity(0.1),
+            Colors.white.withOpacity(0.08),
+            Colors.white.withOpacity(0.04),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: AppColors.teal.withOpacity(0.2),
+          color: Colors.white.withOpacity(0.1),
           width: 1,
         ),
       ),
@@ -40,27 +40,23 @@ class WeeklySummaryCard extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
-                '📊 Weekly Summary',
+                'Weekly Summary',
                 style: TextStyle(
                   fontFamily: 'Montserrat',
                   fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.navy,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
                 ),
               ),
-              IconButton(
-                onPressed: () => _shareSummary(context, ref),
-                icon: Container(
+              GestureDetector(
+                onTap: () => _shareSummary(context, ref),
+                child: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppColors.teal.withOpacity(0.1),
+                    color: Colors.white.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(
-                    Icons.share,
-                    color: AppColors.teal,
-                    size: 18,
-                  ),
+                  child: const Text('📤', style: TextStyle(fontSize: 16)),
                 ),
               ),
             ],
@@ -72,7 +68,7 @@ class WeeklySummaryCard extends ConsumerWidget {
             children: [
               Expanded(
                 child: _buildStatItem(
-                  icon: '🎯',
+                  emoji: '🎯',
                   value: statsAsync.when(
                     data: (s) => '${s?.tasksCompleted ?? 0}',
                     loading: () => '-',
@@ -85,7 +81,7 @@ class WeeklySummaryCard extends ConsumerWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: _buildStatItem(
-                  icon: '⏱️',
+                  emoji: '⏱️',
                   value: statsAsync.when(
                     data: (s) => '${s?.focusMinutes ?? 0}',
                     loading: () => '-',
@@ -102,7 +98,7 @@ class WeeklySummaryCard extends ConsumerWidget {
             children: [
               Expanded(
                 child: _buildStatItem(
-                  icon: '🔥',
+                  emoji: '🔥',
                   value: streakState.when(
                     data: (s) => '${s.currentStreak}',
                     loading: () => '-',
@@ -115,7 +111,7 @@ class WeeklySummaryCard extends ConsumerWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: _buildStatItem(
-                  icon: '⭐',
+                  emoji: '⭐',
                   value: gamState.when(
                     data: (g) => 'Lv ${g.level}',
                     loading: () => '-',
@@ -135,21 +131,21 @@ class WeeklySummaryCard extends ConsumerWidget {
               final achievements = gam.todayAchievements;
               if (achievements.isEmpty) {
                 return Container(
-                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                  padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
                   decoration: BoxDecoration(
-                    color: AppColors.grey100,
-                    borderRadius: BorderRadius.circular(8),
+                    color: Colors.white.withOpacity(0.06),
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Row(
+                  child: const Row(
                     children: [
-                      const Icon(Icons.emoji_events_outlined, size: 16, color: AppColors.grey500),
-                      const SizedBox(width: 8),
+                      Text('🏆', style: TextStyle(fontSize: 14)),
+                      SizedBox(width: 10),
                       Text(
                         'No achievements this week yet',
                         style: TextStyle(
                           fontFamily: 'Inter',
                           fontSize: 12,
-                          color: AppColors.grey600,
+                          color: Colors.white60,
                         ),
                       ),
                     ],
@@ -158,22 +154,22 @@ class WeeklySummaryCard extends ConsumerWidget {
               }
 
               return Container(
-                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
                 decoration: BoxDecoration(
-                  color: AppColors.purple.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
+                  color: AppColors.purple.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(10),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.emoji_events, size: 16, color: AppColors.purple),
-                    const SizedBox(width: 8),
+                    const Text('🏆', style: TextStyle(fontSize: 14)),
+                    const SizedBox(width: 10),
                     Text(
                       '${achievements.length} achievement${achievements.length > 1 ? 's' : ''} this week',
                       style: const TextStyle(
                         fontFamily: 'Inter',
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: AppColors.purple,
+                        color: Colors.white,
                       ),
                     ),
                   ],
@@ -189,7 +185,7 @@ class WeeklySummaryCard extends ConsumerWidget {
   }
 
   Widget _buildStatItem({
-    required String icon,
+    required String emoji,
     required String value,
     required String label,
     required Color color,
@@ -197,14 +193,23 @@ class WeeklySummaryCard extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Colors.white.withOpacity(0.06),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.2)),
       ),
       child: Row(
         children: [
-          Text(icon, style: const TextStyle(fontSize: 20)),
-          const SizedBox(width: 8),
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Center(
+              child: Text(emoji, style: const TextStyle(fontSize: 18)),
+            ),
+          ),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -214,16 +219,16 @@ class WeeklySummaryCard extends ConsumerWidget {
                   style: TextStyle(
                     fontFamily: 'Montserrat',
                     fontSize: 18,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w700,
                     color: color,
                   ),
                 ),
                 Text(
                   label,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 10,
-                    color: AppColors.grey600,
+                    color: Colors.white60,
                   ),
                 ),
               ],
@@ -244,25 +249,20 @@ class WeeklySummaryCard extends ConsumerWidget {
     final streak = streakState.value;
 
     final buffer = StringBuffer();
-    buffer.writeln('📊 FocusFlow Weekly Summary');
-    buffer.writeln('===========================');
+    buffer.writeln('FocusFlow Weekly Summary');
+    buffer.writeln('========================');
     buffer.writeln();
-    buffer.writeln('🎯 Tasks Completed: ${stats?.tasksCompleted ?? 0}');
-    buffer.writeln('⏱️ Focus Minutes: ${stats?.focusMinutes ?? 0}');
-    buffer.writeln('🔥 Current Streak: ${streak?.currentStreak ?? 0} days');
-    buffer.writeln('⭐ Level: ${gamData?.level ?? 1}');
-    if (gamData != null && gamData.todayAchievements.isNotEmpty) {
-      buffer.writeln('🏆 Achievements: ${gamData.todayAchievements.length}');
-    }
-    buffer.writeln();
-    buffer.writeln('Keep focusing! 💪');
+    buffer.writeln('Tasks: ${stats?.tasksCompleted ?? 0}');
+    buffer.writeln('Focus: ${stats?.focusMinutes ?? 0} min');
+    buffer.writeln('Streak: ${streak?.currentStreak ?? 0} days');
+    buffer.writeln('Level: ${gamData?.level ?? 1}');
 
     await Clipboard.setData(ClipboardData(text: buffer.toString()));
 
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Summary copied to clipboard!'),
+          content: Text('Summary copied!'),
           backgroundColor: AppColors.success,
           duration: Duration(seconds: 2),
         ),

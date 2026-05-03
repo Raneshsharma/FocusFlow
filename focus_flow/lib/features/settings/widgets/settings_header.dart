@@ -8,36 +8,40 @@ class SettingsHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.symmetric(vertical: 24),
       child: Column(
         children: [
+          // Logo container - perfectly centered with fixed dimensions
           Container(
-            width: 64,
-            height: 64,
+            width: 72,
+            height: 72,
             decoration: BoxDecoration(
-              color: AppColors.teal.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(16),
+              color: AppColors.teal.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(18),
             ),
-            child: Center(
+            child: const Center(
               child: AppIcon(
                 AppIcons.checkCircle,
                 color: AppColors.teal,
-                size: 32,
+                size: 36,
               ),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
+          // App name
           const Text(
             'FocusFlow',
             style: TextStyle(
               fontFamily: 'Montserrat',
-              fontSize: 22,
+              fontSize: 24,
               fontWeight: FontWeight.w800,
-              color: AppColors.teal,
+              color: AppColors.navy,
+              letterSpacing: -0.5,
             ),
           ),
           const SizedBox(height: 4),
-          Text(
+          // Version
+          const Text(
             'Version 1.0.0',
             style: TextStyle(
               fontFamily: 'Inter',
@@ -45,20 +49,21 @@ class SettingsHeader extends StatelessWidget {
               color: AppColors.grey500,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
+          // Tagline pill - consistent styling
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
             decoration: BoxDecoration(
               color: AppColors.teal.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(20),
             ),
             child: const Text(
               'Made for ADHD brains',
               style: TextStyle(
                 fontFamily: 'Inter',
-                fontSize: 11,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
                 color: AppColors.teal,
-                fontWeight: FontWeight.w500,
               ),
             ),
           ),

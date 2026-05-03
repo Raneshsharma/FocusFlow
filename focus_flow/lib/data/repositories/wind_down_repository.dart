@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:hive/hive.dart';
 import '../models/wind_down_entry.dart';
+import '../../core/utils/date_helpers.dart';
 
 class WindDownRepository {
   static const String boxName = 'wind_down';
@@ -19,14 +20,14 @@ class WindDownRepository {
   }
 
   WindDownEntry? getByDate(DateTime date) {
-    final dateKey = _dateKey(date);
+    final dateKey = formatDateKey(date);
     final json = _box.get(dateKey);
     if (json == null) return null;
     return WindDownEntry.fromJson(jsonDecode(json));
   }
 
   Future<void> save(WindDownEntry entry) async {
-    final dateKey = _dateKey(entry.date);
+    final dateKey = formatDateKey(entry.date);
     await _box.put(dateKey, jsonEncode(entry.toJson()));
   }
 
@@ -36,9 +37,5 @@ class WindDownRepository {
 
   Future<void> deleteAll() async {
     await _box.clear();
-  }
-
-  String _dateKey(DateTime date) {
-    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
   }
 }

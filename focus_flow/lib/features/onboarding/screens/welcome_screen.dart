@@ -14,9 +14,9 @@ class WelcomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.white,
-      body: SafeArea(
+    return Container(
+      color: AppColors.white,
+      child: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
             final isTablet = constraints.maxWidth >= ResponsiveBreakpoints.tablet;

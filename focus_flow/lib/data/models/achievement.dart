@@ -1,5 +1,19 @@
 enum AchievementTier { bronze, silver, gold, platinum }
 
+enum RequirementType {
+  totalSessions,
+  totalTasks,
+  currentStreak,
+  totalMinutes,
+  deepWorkSessions,
+  pomodoroSessions,
+  quickWinSessions,
+  energyRatings,
+  notesCreated,
+  templatesSaved,
+  achievementsUnlocked,
+}
+
 class Achievement {
   final String definitionId;
   final DateTime unlockedAt;
@@ -26,7 +40,10 @@ class AchievementDefinition {
   final String description;
   final String icon;
   final AchievementTier tier;
-  final bool Function(int totalSessions, int totalTasks, int currentStreak) isUnlocked;
+  final RequirementType requirementType;
+  final int requirementValue;
+  final bool Function(int totalSessions, int totalTasks, int currentStreak, int totalMinutes, int deepSessions, int pomodoroSessions, int quickSessions, Set<String> energyRatings, int notesCount, int templatesCount, int unlockedCount) isUnlocked;
+  final int Function(int totalSessions, int totalTasks, int currentStreak, int totalMinutes, int deepSessions, int pomodoroSessions, int quickSessions, Set<String> energyRatings, int notesCount, int templatesCount, int unlockedCount) getProgress;
 
   const AchievementDefinition({
     required this.id,
@@ -34,6 +51,9 @@ class AchievementDefinition {
     required this.description,
     required this.icon,
     required this.tier,
+    required this.requirementType,
+    required this.requirementValue,
     required this.isUnlocked,
+    required this.getProgress,
   });
 }

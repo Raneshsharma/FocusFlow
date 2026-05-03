@@ -39,7 +39,7 @@ class StatsSection extends ConsumerWidget {
             children: [
               Expanded(
                 child: _StatCard(
-                  icon: Icons.timer_outlined,
+                  iconEmoji: '⏱',
                   iconColor: AppColors.teal,
                   value: todayStats.when(
                     data: (s) => '${s?.focusMinutes ?? 0}',
@@ -53,7 +53,7 @@ class StatsSection extends ConsumerWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: _StatCard(
-                  icon: Icons.check_circle_outline,
+                  iconEmoji: '⭘',
                   iconColor: AppColors.success,
                   value: todayStats.when(
                     data: (s) => '${s?.tasksCompleted ?? 0}',
@@ -71,7 +71,7 @@ class StatsSection extends ConsumerWidget {
             children: [
               Expanded(
                 child: _StatCard(
-                  icon: Icons.local_fire_department,
+                  iconEmoji: '🔥',
                   iconColor: Colors.orange,
                   value: streakState.when(
                     data: (s) => '${s.currentStreak}',
@@ -85,7 +85,7 @@ class StatsSection extends ConsumerWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: _StatCard(
-                  icon: Icons.emoji_events_outlined,
+                  iconEmoji: '🏆',
                   iconColor: AppColors.purple,
                   value: todayStats.when(
                     data: (s) => '${s?.sessionsCompleted ?? 0}',
@@ -189,14 +189,14 @@ class StatsSection extends ConsumerWidget {
 }
 
 class _StatCard extends StatelessWidget {
-  final IconData icon;
+  final String iconEmoji;
   final Color iconColor;
   final String value;
   final String label;
   final String? trend;
 
   const _StatCard({
-    required this.icon,
+    required this.iconEmoji,
     required this.iconColor,
     required this.value,
     required this.label,
@@ -217,13 +217,15 @@ class _StatCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(icon, size: 18, color: iconColor),
+              Text(iconEmoji, style: TextStyle(fontSize: 18, color: iconColor)),
               if (trend != null) ...[
                 const SizedBox(width: 4),
-                Icon(
-                  trend == 'up' ? Icons.trending_up : Icons.trending_down,
-                  size: 14,
-                  color: trend == 'up' ? AppColors.success : Colors.red,
+                Text(
+                  trend == 'up' ? '↗' : '↘',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: trend == 'up' ? AppColors.success : Colors.red,
+                  ),
                 ),
               ],
             ],

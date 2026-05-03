@@ -45,9 +45,16 @@ class _TaskDetailSheetState extends ConsumerState<TaskDetailSheet> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.15),
+            blurRadius: 20,
+            offset: const Offset(0, -5),
+          ),
+        ],
       ),
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -65,11 +72,12 @@ class _TaskDetailSheetState extends ConsumerState<TaskDetailSheet> {
                     'Task Details',
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.bold,
+                      color: AppColors.navy,
                     ),
                   ),
                 ),
                 IconButton(
-                  icon: AppIcon(AppIcons.close, size: 24),
+                  icon: AppIcon(AppIcons.close, size: 24, color: AppColors.grey600),
                   onPressed: () => Navigator.pop(context),
                 ),
               ],
@@ -81,60 +89,135 @@ class _TaskDetailSheetState extends ConsumerState<TaskDetailSheet> {
               controller: _titleController,
               decoration: InputDecoration(
                 labelText: 'Task',
+                labelStyle: const TextStyle(color: AppColors.grey600, fontWeight: FontWeight.w500),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppColors.grey300, width: 1.5),
                 ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppColors.grey300, width: 1.5),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppColors.teal, width: 2),
+                ),
+                filled: true,
+                fillColor: AppColors.grey50,
+              ),
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: AppColors.navy,
               ),
               maxLines: 2,
               onChanged: (_) => _saveChanges(),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
 
             // Energy Level
-            Text('Energy Level', style: Theme.of(context).textTheme.titleSmall),
-            const SizedBox(height: 8),
+            const Text(
+              'Energy Level',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: AppColors.navy,
+              ),
+            ),
+            const SizedBox(height: 10),
             Wrap(
-              spacing: 8,
+              spacing: 10,
               children: EnergyLevel.values.where((e) => e != EnergyLevel.none).map((energy) {
-                return ChoiceChip(
-                  label: Text(_getEnergyLabel(energy)),
-                  selected: _selectedEnergy == energy,
-                  selectedColor: _getEnergyColor(energy).withOpacity(0.3),
-                  onSelected: (selected) {
-                    if (selected) {
-                      setState(() => _selectedEnergy = energy);
-                      _saveChanges();
-                    }
+                final isSelected = _selectedEnergy == energy;
+                return GestureDetector(
+                  onTap: () {
+                    setState(() => _selectedEnergy = energy);
+                    _saveChanges();
                   },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: isSelected ? _getEnergyColor(energy) : Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isSelected ? _getEnergyColor(energy) : AppColors.grey300,
+                        width: isSelected ? 2 : 1,
+                      ),
+                      boxShadow: isSelected
+                          ? [BoxShadow(color: _getEnergyColor(energy).withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 2))]
+                          : null,
+                    ),
+                    child: Text(
+                      _getEnergyLabel(energy),
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: isSelected ? Colors.white : _getEnergyColor(energy),
+                      ),
+                    ),
+                  ),
                 );
               }).toList(),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
 
             // Time Zone
-            Text('Time Zone', style: Theme.of(context).textTheme.titleSmall),
-            const SizedBox(height: 8),
+            const Text(
+              'Time Zone',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: AppColors.navy,
+              ),
+            ),
+            const SizedBox(height: 10),
             Wrap(
-              spacing: 8,
+              spacing: 10,
               children: TimeZone.values.where((z) => z != TimeZone.none).map((zone) {
-                return ChoiceChip(
-                  label: Text(_getZoneLabel(zone)),
-                  selected: _selectedZone == zone,
-                  selectedColor: AppColors.teal.withOpacity(0.3),
-                  onSelected: (selected) {
-                    if (selected) {
-                      setState(() => _selectedZone = zone);
-                      _saveChanges();
-                    }
+                final isSelected = _selectedZone == zone;
+                final zoneColor = _getZoneColor(zone);
+                return GestureDetector(
+                  onTap: () {
+                    setState(() => _selectedZone = zone);
+                    _saveChanges();
                   },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: isSelected ? zoneColor : Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isSelected ? zoneColor : AppColors.grey300,
+                        width: isSelected ? 2 : 1,
+                      ),
+                      boxShadow: isSelected
+                          ? [BoxShadow(color: zoneColor.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 2))]
+                          : null,
+                    ),
+                    child: Text(
+                      _getZoneLabel(zone),
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: isSelected ? Colors.white : zoneColor,
+                      ),
+                    ),
+                  ),
                 );
               }).toList(),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
 
             // Favorite toggle
             SwitchListTile(
-              title: const Text('Favorite'),
+              title: const Text(
+                'Favorite',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.navy,
+                ),
+              ),
               secondary: AppIcon(
                 _isFavorite ? AppIcons.starFilled : AppIcons.starOutline,
                 color: _isFavorite ? AppColors.amber : AppColors.grey500,
@@ -145,6 +228,7 @@ class _TaskDetailSheetState extends ConsumerState<TaskDetailSheet> {
                 setState(() => _isFavorite = value);
                 _saveChanges();
               },
+              activeColor: AppColors.amber,
               contentPadding: EdgeInsets.zero,
             ),
             const SizedBox(height: 16),
@@ -154,9 +238,27 @@ class _TaskDetailSheetState extends ConsumerState<TaskDetailSheet> {
               controller: _notesController,
               decoration: InputDecoration(
                 labelText: 'Notes',
+                labelStyle: const TextStyle(color: AppColors.grey600, fontWeight: FontWeight.w500),
+                hintText: 'Add any additional notes...',
+                hintStyle: const TextStyle(color: AppColors.grey400),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppColors.grey300, width: 1.5),
                 ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppColors.grey300, width: 1.5),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppColors.teal, width: 2),
+                ),
+                filled: true,
+                fillColor: AppColors.grey50,
+              ),
+              style: const TextStyle(
+                fontSize: 14,
+                color: AppColors.navy,
               ),
               maxLines: 3,
               onChanged: (_) => _saveChanges(),
@@ -236,6 +338,21 @@ class _TaskDetailSheetState extends ConsumerState<TaskDetailSheet> {
         return 'Anytime';
       case TimeZone.none:
         return '';
+    }
+  }
+
+  Color _getZoneColor(TimeZone zone) {
+    switch (zone) {
+      case TimeZone.morning:
+        return AppColors.zoneMorning;
+      case TimeZone.afternoon:
+        return AppColors.zoneAfternoon;
+      case TimeZone.evening:
+        return AppColors.zoneEvening;
+      case TimeZone.anytime:
+        return AppColors.teal;
+      case TimeZone.none:
+        return AppColors.grey500;
     }
   }
 

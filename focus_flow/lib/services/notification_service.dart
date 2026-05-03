@@ -5,6 +5,11 @@ class NotificationService {
   factory NotificationService() => _instance;
   NotificationService._internal();
 
+  // Notification channel IDs
+  static const int sessionNotificationId = 1;
+  static const int breakNotificationId = 2;
+  static const int longBreakNotificationId = 3;
+
   final FlutterLocalNotificationsPlugin _notifications =
       FlutterLocalNotificationsPlugin();
 
@@ -64,7 +69,7 @@ class NotificationService {
     );
 
     await _notifications.show(
-      0,
+      sessionNotificationId,
       title,
       body,
       details,
@@ -95,7 +100,7 @@ class NotificationService {
     );
 
     await _notifications.show(
-      1,
+      breakNotificationId,
       'Break Time Over! 🎉',
       'Ready to get back to work?',
       details,
@@ -126,7 +131,7 @@ class NotificationService {
     );
 
     await _notifications.show(
-      3,
+      longBreakNotificationId,
       'Long Break Complete! 💪',
       'Great work! You finished all 4 pomodoro rounds!',
       details,

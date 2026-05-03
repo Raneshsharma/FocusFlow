@@ -75,7 +75,10 @@ class _BreathingTimerSheetState extends ConsumerState<BreathingTimerSheet>
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.close, size: 24),
+                  icon: const Text(
+                      '✕',
+                      style: TextStyle(fontSize: 24),
+                    ),
                   onPressed: () => Navigator.pop(context),
                 ),
               ],

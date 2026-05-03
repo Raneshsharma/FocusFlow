@@ -40,6 +40,9 @@ class _TimeZoneCardState extends State<TimeZoneCard> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
+        border: Border(
+          left: BorderSide(color: widget.color, width: 4),
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.06),
@@ -60,9 +63,6 @@ class _TimeZoneCardState extends State<TimeZoneCard> {
               decoration: BoxDecoration(
                 color: widget.color.withOpacity(0.06),
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                border: Border(
-                  left: BorderSide(color: widget.color, width: 4),
-                ),
               ),
               child: Row(
                 children: [
@@ -193,10 +193,12 @@ class _TimeZoneCardState extends State<TimeZoneCard> {
                   ),
                   const SizedBox(width: 6),
                   // Expand arrow
-                  Icon(
-                    _isExpanded ? Icons.expand_less : Icons.expand_more,
-                    size: 22,
-                    color: AppColors.grey500,
+                  Text(
+                    _isExpanded ? '⌃' : '⌄',
+                    style: TextStyle(
+                      fontSize: 22,
+                      color: AppColors.grey500,
+                    ),
                   ),
                 ],
               ),
@@ -223,14 +225,22 @@ class _TimeZoneCardState extends State<TimeZoneCard> {
 
   Widget _buildEmptyState() {
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 24),
       decoration: BoxDecoration(
-        color: AppColors.grey50,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: AppColors.grey200.withOpacity(0.5),
-          width: 1,
+          color: AppColors.grey200,
+          width: 1.5,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -242,7 +252,7 @@ class _TimeZoneCardState extends State<TimeZoneCard> {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: widget.color.withOpacity(0.08),
+                color: widget.color.withOpacity(0.12),
                 shape: BoxShape.circle,
               ),
               child: Center(
@@ -251,7 +261,7 @@ class _TimeZoneCardState extends State<TimeZoneCard> {
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
-                    color: widget.color.withOpacity(0.6),
+                    color: widget.color,
                   ),
                 ),
               ),
@@ -264,17 +274,17 @@ class _TimeZoneCardState extends State<TimeZoneCard> {
               fontFamily: 'Inter',
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: AppColors.grey700,
+              color: AppColors.navy,
             ),
           ),
           const SizedBox(height: 4),
-          const Text(
+          Text(
             'Tap + to add tasks to this zone',
             style: TextStyle(
               fontFamily: 'Inter',
               fontSize: 12,
-              fontWeight: FontWeight.w400,
-              color: AppColors.grey500,
+              fontWeight: FontWeight.w500,
+              color: AppColors.grey600,
             ),
           ),
         ],

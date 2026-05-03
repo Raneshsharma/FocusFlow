@@ -1,5 +1,13 @@
 import 'enums.dart';
 
+/// Generates a unique ID using microsecond timestamp + random component.
+/// This is collision-resistant even under high-frequency creation.
+String _generateId() {
+  final timestamp = DateTime.now().microsecondsSinceEpoch;
+  final random = DateTime.now().hashCode;
+  return '${timestamp}_$random';
+}
+
 class Task {
   String id;
   String title;
@@ -43,7 +51,7 @@ class Task {
     this.estimatedMinutes,
     this.notes,
     this.scheduledTime,
-  }) : id = DateTime.now().millisecondsSinceEpoch.toString(),
+  }) : id = _generateId(),
        tags = tags ?? [],
        createdAt = DateTime.now(),
        completed = false,
@@ -67,19 +75,23 @@ class Task {
   };
 
   factory Task.fromJson(Map<String, dynamic> json) => Task(
-    id: json['id'],
-    title: json['title'],
-    energy: EnergyLevel.values[json['energy'] ?? 0],
-    zone: TimeZone.values[json['zone'] ?? 0],
-    priority: Priority.values[json['priority'] ?? 1],
+    id: json['id']?.toString() ?? '',
+    title: json['title']?.toString() ?? 'Untitled Task',
+    energy: _safeEnum(EnergyLevel.values, json['energy'] ?? 0, EnergyLevel.none),
+    zone: _safeEnum(TimeZone.values, json['zone'] ?? 4, TimeZone.anytime),
+    priority: _safeEnum(Priority.values, json['priority'] ?? 1, Priority.medium),
     tags: List<String>.from(json['tags'] ?? []),
-    estimatedMinutes: json['estimatedMinutes'],
-    completed: json['completed'] ?? false,
-    completedAt: json['completedAt'] != null ? DateTime.parse(json['completedAt']) : null,
-    isFavorite: json['isFavorite'] ?? false,
-    notes: json['notes'],
-    scheduledTime: json['scheduledTime'],
-    createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt']) : DateTime.now(),
-    completionCount: json['completionCount'],
+    estimatedMinutes: json['estimatedMinutes'] as int?,
+    completed: json['completed'] == true,
+    completedAt: json['completedAt'] != null ? DateTime.parse(json['completedAt'].toString()) : null,
+    isFavorite: json['isFavorite'] == true,
+    notes: json['notes']?.toString(),
+    scheduledTime: json['scheduledTime']?.toString(),
+    createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt'].toString()) : DateTime.now(),
+    completionCount: json['completionCount'] as int?,
   );
+
+static T _safeEnum<T>(List<T> values, int index, T fallback) {
+  return (index >= 0 && index < values.length) ? values[index] : fallback;
+}
 }

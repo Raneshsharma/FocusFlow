@@ -1,4 +1,5 @@
 import 'package:hive/hive.dart';
+import '../core/utils/date_helpers.dart';
 
 class StreakService {
   static final StreakService _instance = StreakService._internal();
@@ -17,8 +18,8 @@ class StreakService {
     final today = DateTime.now();
     final yesterday = today.subtract(const Duration(days: 1));
 
-    final todayKey = _dateKey(today);
-    final yesterdayKey = _dateKey(yesterday);
+    final todayKey = formatDateKey(today);
+    final yesterdayKey = formatDateKey(yesterday);
 
     final lastActiveKey = box.get(_lastActiveKey);
     final currentStreak = box.get(_currentStreakKey, defaultValue: 0) as int;
@@ -61,7 +62,7 @@ class StreakService {
       return StreakResult(
         currentStreak: 0,
         longestStreak: longestStreak,
-        lastActiveDate: lastActiveKey != null ? _parseDate(lastActiveKey) : null,
+        lastActiveDate: lastActiveKey != null ? parseDateKey(lastActiveKey!) : null,
         isGraceDay: false,
         wasBroken: currentStreak > 0,
       );
@@ -71,9 +72,9 @@ class StreakService {
   Future<void> recordActivity(DateTime date) async {
     final box = await _box;
     final today = DateTime.now();
-    final todayKey = _dateKey(today);
-    final yesterdayKey = _dateKey(today.subtract(const Duration(days: 1)));
-    final activityDateKey = _dateKey(date);
+    final todayKey = formatDateKey(today);
+    final yesterdayKey = formatDateKey(today.subtract(const Duration(days: 1)));
+    final activityDateKey = formatDateKey(date);
 
     // Only record if it's today or yesterday
     if (activityDateKey != todayKey && activityDateKey != yesterdayKey) {
@@ -116,19 +117,6 @@ class StreakService {
     final box = await _box;
     await box.put(_currentStreakKey, 0);
     await box.put(_lastActiveKey, null);
-  }
-
-  String _dateKey(DateTime date) {
-    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
-  }
-
-  DateTime? _parseDate(String key) {
-    try {
-      final parts = key.split('-');
-      return DateTime(int.parse(parts[0]), int.parse(parts[1]), int.parse(parts[2]));
-    } catch (e) {
-      return null;
-    }
   }
 }
 

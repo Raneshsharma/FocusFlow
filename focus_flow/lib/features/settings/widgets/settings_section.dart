@@ -32,7 +32,7 @@ class SettingsSection extends StatelessWidget {
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
                 color: AppColors.teal,
-                letterSpacing: 1.4,
+                letterSpacing: 1.5,
               ),
             ),
           ),

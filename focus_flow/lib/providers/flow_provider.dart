@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/models/flow_session.dart';
 import '../data/models/enums.dart';
+import '../data/models/app_settings.dart';
 import '../core/constants/app_constants.dart';
 import '../services/notification_service.dart';
 import '../services/overlay_service.dart';
@@ -21,6 +22,8 @@ class FlowSessionState {
   final bool isBreak;
   final bool isLongBreak;
   final SessionType sessionType;
+  final PomodoroTimerSettings pomodoroSettings;
+  final int customDurationMinutes; // For custom timer sessions
 
   const FlowSessionState({
     this.activeSession,
@@ -31,6 +34,8 @@ class FlowSessionState {
     this.isBreak = false,
     this.isLongBreak = false,
     this.sessionType = SessionType.open,
+    this.pomodoroSettings = const PomodoroTimerSettings(),
+    this.customDurationMinutes = 0,
   });
 
   FlowSessionState copyWith({
@@ -42,6 +47,8 @@ class FlowSessionState {
     bool? isBreak,
     bool? isLongBreak,
     SessionType? sessionType,
+    PomodoroTimerSettings? pomodoroSettings,
+    int? customDurationMinutes,
   }) {
     return FlowSessionState(
       activeSession: activeSession ?? this.activeSession,
@@ -52,42 +59,55 @@ class FlowSessionState {
       isBreak: isBreak ?? this.isBreak,
       isLongBreak: isLongBreak ?? this.isLongBreak,
       sessionType: sessionType ?? this.sessionType,
+      pomodoroSettings: pomodoroSettings ?? this.pomodoroSettings,
+      customDurationMinutes: customDurationMinutes ?? this.customDurationMinutes,
     );
   }
 
-  double get progress {
+  /// Returns total seconds for current phase based on user settings
+  int get _currentPhaseTotal {
     if (sessionType == SessionType.pomodoro) {
-      int total;
       if (isLongBreak) {
-        total = AppConstants.pomodoroLongBreak;
+        return pomodoroSettings.longBreakMinutes * 60;
       } else if (isBreak) {
-        total = AppConstants.pomodoroShortBreak;
+        return pomodoroSettings.shortBreakMinutes * 60;
       } else {
-        total = AppConstants.pomodoroWork;
+        return pomodoroSettings.workMinutes * 60;
       }
-      return total > 0 ? currentPhaseElapsed / total : 0;
     } else if (sessionType == SessionType.deep) {
-      return AppConstants.deepWork > 0 ? elapsedSeconds / AppConstants.deepWork : 0;
+      return AppConstants.deepWork;
+    } else if (sessionType == SessionType.custom && customDurationMinutes > 0) {
+      // Custom timer session
+      return customDurationMinutes * 60;
+    } else if (sessionType == SessionType.open && customDurationMinutes > 0) {
+      // Legacy custom timer (open session with custom duration)
+      return customDurationMinutes * 60;
+    }
+    return 0;
+  }
+
+  double get progress {
+    final total = _currentPhaseTotal;
+    if (sessionType == SessionType.pomodoro) {
+      return total > 0 ? currentPhaseElapsed / total : 0;
+    } else if (sessionType == SessionType.deep || sessionType == SessionType.custom) {
+      return total > 0 ? elapsedSeconds / total : 0;
     }
     return 0;
   }
 
   int get remainingSeconds {
+    final total = _currentPhaseTotal;
     if (sessionType == SessionType.pomodoro) {
-      int total;
-      if (isLongBreak) {
-        total = AppConstants.pomodoroLongBreak;
-      } else if (isBreak) {
-        total = AppConstants.pomodoroShortBreak;
-      } else {
-        total = AppConstants.pomodoroWork;
-      }
       return (total - currentPhaseElapsed).clamp(0, total);
-    } else if (sessionType == SessionType.deep) {
-      return (AppConstants.deepWork - elapsedSeconds).clamp(0, AppConstants.deepWork);
+    } else if (sessionType == SessionType.deep || sessionType == SessionType.custom) {
+      return (total - elapsedSeconds).clamp(0, total);
     }
     return 0;
   }
+
+  /// Get total seconds for display purposes
+  int get totalSeconds => _currentPhaseTotal;
 }
 
 class FlowSessionNotifier extends StateNotifier<FlowSessionState> with WidgetsBindingObserver {
@@ -140,8 +160,8 @@ class FlowSessionNotifier extends StateNotifier<FlowSessionState> with WidgetsBi
   }
 
   void startSession(SessionType type, {String? taskId, String? taskTitle}) {
+    debugPrint('startSession called: type=$type, taskId=$taskId');
     _stopwatch.reset();
-    _stopwatch.start();
 
     String? resolvedTaskTitle = taskTitle;
     if (taskId != null && taskTitle == null) {
@@ -152,10 +172,13 @@ class FlowSessionNotifier extends StateNotifier<FlowSessionState> with WidgetsBi
           final task = taskList.firstWhere((t) => t.id == taskId, orElse: () => throw Exception('Not found'));
           resolvedTaskTitle = task.title;
         } catch (e) {
-          // Proceed without title
+          debugPrint('FlowSessionNotifier: Task not found for session, proceeding without title');
         }
       }
     }
+
+    // Load user pomodoro settings
+    final pomodoroSettings = _ref.read(pomodoroSettingsProvider);
 
     final session = FlowSession.create(
       type: type,
@@ -166,29 +189,31 @@ class FlowSessionNotifier extends StateNotifier<FlowSessionState> with WidgetsBi
 
     state = FlowSessionState(
       activeSession: session,
-      isRunning: true,
+      isRunning: false, // User taps play to start
       sessionType: type,
       pomodoroRound: type == SessionType.pomodoro ? 1 : 0,
+      pomodoroSettings: pomodoroSettings,
     );
+  }
 
+  void resume() {
+    debugPrint('resume called - starting timer');
+    _stopwatch.reset();
+    _stopwatch.start();
+    state = state.copyWith(isRunning: true);
     _startTimer();
   }
 
   void _startTimer() {
+    debugPrint('_startTimer called');
     _timer?.cancel();
-    _timer = Timer.periodic(const Duration(milliseconds: 500), (_) {
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      debugPrint('Timer tick: elapsed=${_stopwatch.elapsed.inSeconds}');
       final totalElapsed = _stopwatch.elapsed.inSeconds;
       if (totalElapsed != state.elapsedSeconds) {
         int phaseElapsed = state.currentPhaseElapsed;
         if (state.sessionType == SessionType.pomodoro) {
-          int currentPhaseTarget;
-          if (state.isLongBreak) {
-            currentPhaseTarget = AppConstants.pomodoroLongBreak;
-          } else if (state.isBreak) {
-            currentPhaseTarget = AppConstants.pomodoroShortBreak;
-          } else {
-            currentPhaseTarget = AppConstants.pomodoroWork;
-          }
+          final currentPhaseTarget = state.totalSeconds;
           phaseElapsed = totalElapsed % currentPhaseTarget;
         }
         state = state.copyWith(
@@ -212,16 +237,17 @@ class FlowSessionNotifier extends StateNotifier<FlowSessionState> with WidgetsBi
         pause();
       }
     } else if (state.sessionType == SessionType.pomodoro) {
-      int target;
-      if (state.isLongBreak) {
-        target = AppConstants.pomodoroLongBreak;
-      } else if (state.isBreak) {
-        target = AppConstants.pomodoroShortBreak;
-      } else {
-        target = AppConstants.pomodoroWork;
-      }
-      if (state.currentPhaseElapsed >= target) {
+      if (state.currentPhaseElapsed >= state.totalSeconds) {
         _handlePomodoroRoundComplete();
+      }
+    } else if (state.sessionType == SessionType.custom) {
+      // For custom sessions, check if elapsed time reaches target duration
+      if (state.totalSeconds > 0 && state.elapsedSeconds >= state.totalSeconds) {
+        NotificationService().showSessionEndNotification(
+          title: 'Session Complete! ⏱️',
+          body: 'Great work! Time to take a break.',
+        );
+        pause();
       }
     }
   }
@@ -230,48 +256,52 @@ class FlowSessionNotifier extends StateNotifier<FlowSessionState> with WidgetsBi
     if (_isTransitioning) return;
     _isTransitioning = true;
 
-    if (!state.isBreak) {
-      NotificationService().showSessionEndNotification(
-        title: 'Work Block Done! ⚡',
-        body: 'Time for a break. You earned it!',
-      );
+    try {
+      if (!state.isBreak) {
+        NotificationService().showSessionEndNotification(
+          title: 'Work Block Done! ⚡',
+          body: 'Time for a break. You earned it!',
+        );
 
-      _stopwatch.reset();
-      _stopwatch.start();
-      state = state.copyWith(
-        isBreak: true,
-        elapsedSeconds: 0,
-        currentPhaseElapsed: 0,
-      );
-    } else if (state.isLongBreak) {
-      NotificationService().showLongBreakEndNotification();
-      _isTransitioning = false;
-      pause();
-      return;
-    } else {
-      NotificationService().showBreakEndNotification();
-
-      if (state.pomodoroRound >= AppConstants.pomodoroRounds) {
         _stopwatch.reset();
         _stopwatch.start();
         state = state.copyWith(
-          isBreak: false,
-          isLongBreak: true,
+          isBreak: true,
           elapsedSeconds: 0,
           currentPhaseElapsed: 0,
         );
+      } else if (state.isLongBreak) {
+        NotificationService().showLongBreakEndNotification();
+        pause();
+        return;
       } else {
-        _stopwatch.reset();
-        _stopwatch.start();
-        state = state.copyWith(
-          isBreak: false,
-          elapsedSeconds: 0,
-          currentPhaseElapsed: 0,
-          pomodoroRound: state.pomodoroRound + 1,
-        );
+        NotificationService().showBreakEndNotification();
+
+        // Use user's configured rounds from settings
+        final roundsBeforeLongBreak = state.pomodoroSettings.roundsBeforeLongBreak;
+        if (state.pomodoroRound >= roundsBeforeLongBreak) {
+          _stopwatch.reset();
+          _stopwatch.start();
+          state = state.copyWith(
+            isBreak: false,
+            isLongBreak: true,
+            elapsedSeconds: 0,
+            currentPhaseElapsed: 0,
+          );
+        } else {
+          _stopwatch.reset();
+          _stopwatch.start();
+          state = state.copyWith(
+            isBreak: false,
+            elapsedSeconds: 0,
+            currentPhaseElapsed: 0,
+            pomodoroRound: state.pomodoroRound + 1,
+          );
+        }
       }
+    } finally {
+      _isTransitioning = false;
     }
-    _isTransitioning = false;
   }
 
   void pause() {
@@ -280,10 +310,34 @@ class FlowSessionNotifier extends StateNotifier<FlowSessionState> with WidgetsBi
     _timer?.cancel();
   }
 
-  void resume() {
-    _stopwatch.start();
-    state = state.copyWith(isRunning: true);
-    _startTimer();
+  void discardSession() {
+    _timer?.cancel();
+    _stopwatch.reset();
+    state = const FlowSessionState();
+  }
+
+  void resetTimer() {
+    _stopwatch.reset();
+    state = state.copyWith(elapsedSeconds: 0, currentPhaseElapsed: 0);
+  }
+
+  void startCustomSession(int minutes) {
+    _stopwatch.reset();
+
+    final session = FlowSession.create(
+      type: SessionType.custom,
+      taskTitle: 'Custom Timer',
+      startedAt: DateTime.now(),
+    );
+
+    state = FlowSessionState(
+      activeSession: session,
+      isRunning: false, // User taps play to start
+      sessionType: SessionType.custom,
+      pomodoroRound: 0,
+      pomodoroSettings: const PomodoroTimerSettings(),
+      customDurationMinutes: minutes,
+    );
   }
 
   Future<FlowSession?> stop() async {
@@ -299,30 +353,33 @@ class FlowSessionNotifier extends StateNotifier<FlowSessionState> with WidgetsBi
       try {
         final repo = await _ref.read(sessionRepositoryProvider.future);
         await repo.save(session);
-        await _ref.read(statsRepositoryProvider.future).then((statsRepo) async {
-          await statsRepo.incrementSessionsCompleted(DateTime.now());
-          await statsRepo.addFocusMinutes(DateTime.now(), state.elapsedSeconds ~/ 60);
+      } catch (e, st) {
+        debugPrint('FlowSessionNotifier.stop: Error saving session: $e\n$st');
+      }
 
-          final stats = await statsRepo.getStats();
-          final streak = await statsRepo.getCurrentStreak();
-          final newAchievement = await _ref.read(achievementsProvider.notifier).checkAndUnlock(
-            totalSessions: stats.totalSessions,
-            totalTasks: stats.totalTasksCompleted,
-            currentStreak: streak,
-          );
-          if (newAchievement != null) {
-            final defs = _ref.read(achievementDefinitionsProvider);
-            try {
-              final def = defs.firstWhere((d) => d.id == newAchievement.definitionId);
-              // Use overlay service for showing achievement toast
-              if (overlayService.isInitialized) {
-                AchievementToast.showOverlay(overlayService, def);
-              }
-            } catch (_) {}
+      try {
+        final statsRepo = await _ref.read(statsRepositoryProvider.future);
+        await statsRepo.incrementSessionsCompleted(DateTime.now());
+        await statsRepo.addFocusMinutes(DateTime.now(), state.elapsedSeconds ~/ 60);
+        // Refresh today stats so weekly chart shows updated data
+        _ref.invalidate(todayStatsProvider);
+
+        // Check for new achievements using the full stats provider
+        final newAchievement = await _ref.read(achievementsProvider.notifier).checkAndUnlock();
+        if (newAchievement != null) {
+          final defs = _ref.read(achievementDefinitionsProvider);
+          try {
+            final def = defs.firstWhere((d) => d.id == newAchievement.definitionId);
+            // Use overlay service for showing achievement toast
+            if (overlayService.isInitialized) {
+              AchievementToast.showOverlay(overlayService, def);
+            }
+          } catch (e) {
+            debugPrint('FlowSessionNotifier.stop: Achievement definition not found: $e');
           }
-        });
-      } catch (e) {
-        debugPrint('Error saving session: $e');
+        }
+      } catch (e, st) {
+        debugPrint('FlowSessionNotifier.stop: Error updating stats/achievements: $e\n$st');
       }
 
       // Add XP for completing session
@@ -345,8 +402,9 @@ class FlowSessionNotifier extends StateNotifier<FlowSessionState> with WidgetsBi
 
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
     _timer?.cancel();
+    _stopwatch.stop();
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 }

@@ -27,6 +27,7 @@ class SettingsToggleTile extends StatelessWidget {
     return Opacity(
       opacity: enabled ? 1.0 : 0.5,
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
             width: 40,
@@ -43,6 +44,7 @@ class SettingsToggleTile extends StatelessWidget {
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   title,

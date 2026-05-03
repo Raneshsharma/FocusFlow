@@ -25,6 +25,7 @@ import '../widgets/settings_stat_card.dart';
 import '../widgets/theme_preview_card.dart';
 import '../widgets/pomodoro_settings_sheet.dart';
 import '../../../providers/providers.dart';
+import '../../../providers/stats_provider.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -34,67 +35,9 @@ class SettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
-  bool _isDarkMode = false;
-  bool _soundEnabled = true;
+  // Only transient UI state - not derived from providers
   bool _isExporting = false;
   bool _isImporting = false;
-  bool _isLoading = true;
-  double _fontScale = 1.0;
-
-  int _totalTasks = 0;
-  int _totalSessions = 0;
-  int _totalFocusMinutes = 0;
-  int _currentStreak = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadSettings();
-    _loadStats();
-  }
-
-  Future<void> _loadSettings() async {
-    try {
-      final settings = ref.read(appSettingsProvider).valueOrNull;
-      if (mounted && settings != null) {
-        setState(() {
-          _isDarkMode = settings.isDarkMode;
-          _soundEnabled = settings.soundEnabled;
-          _fontScale = settings.display.fontScale;
-        });
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    }
-  }
-
-  Future<void> _loadStats() async {
-    try {
-      final taskRepo = await ref.read(taskRepositoryProvider.future);
-      final sessionRepo = await ref.read(sessionRepositoryProvider.future);
-      final statsRepo = await ref.read(statsRepositoryProvider.future);
-
-      final tasks = taskRepo.getAll();
-      final sessions = sessionRepo.getAll();
-      final streak = await statsRepo.getCurrentStreak();
-
-      final completedTasks = tasks.where((t) => t.completed).length;
-      final focusMinutes = sessions.fold<int>(0, (sum, s) => sum + (s.durationSeconds ~/ 60));
-
-      if (mounted) {
-        setState(() {
-          _totalTasks = completedTasks;
-          _totalSessions = sessions.length;
-          _totalFocusMinutes = focusMinutes;
-          _currentStreak = streak;
-        });
-      }
-    } catch (e) {
-      debugPrint('Error loading stats: $e');
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -105,7 +48,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final pomSettings = ref.watch(pomodoroSettingsProvider);
     final notificationSettings = ref.watch(notificationSettingsProvider);
 
-    if (_isLoading || settingsAsync.isLoading) {
+    // Stats from providers (reactive)
+    final streakAsync = ref.watch(settingsStreakProvider);
+    final totalSessionsAsync = ref.watch(settingsTotalSessionsProvider);
+    final totalFocusMinutesAsync = ref.watch(settingsTotalFocusMinutesProvider);
+    final completedTasksCount = ref.watch(completedTasksCountProvider);
+
+    if (settingsAsync.isLoading) {
       return Scaffold(
         backgroundColor: AppTheme.dynamicScaffoldBg(context),
         body: const Center(child: CircularProgressIndicator()),
@@ -115,6 +64,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return Scaffold(
       backgroundColor: AppTheme.dynamicScaffoldBg(context),
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Text('←', style: TextStyle(fontSize: 28, color: AppColors.navy, fontWeight: FontWeight.bold)),
+          onPressed: () => Navigator.pop(context),
+        ),
         title: const Text('Settings'),
         backgroundColor: AppTheme.dynamicScaffoldBg(context),
         foregroundColor: AppTheme.dynamicTextOnSurface(context),
@@ -134,7 +87,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     Expanded(
                       child: SettingsStatCard(
                         iconEmoji: '🔥',
-                        value: '$_currentStreak',
+                        value: streakAsync.when(
+                          data: (v) => '$v',
+                          loading: () => '-',
+                          error: (_, __) => '0',
+                        ),
                         label: 'Day Streak',
                         iconColor: AppColors.amber,
                       ),
@@ -143,7 +100,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     Expanded(
                       child: SettingsStatCard(
                         iconEmoji: '✅',
-                        value: '$_totalTasks',
+                        value: '$completedTasksCount',
                         label: 'Tasks Done',
                         iconColor: AppColors.success,
                       ),
@@ -159,7 +116,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     Expanded(
                       child: SettingsStatCard(
                         iconEmoji: '🎯',
-                        value: '$_totalSessions',
+                        value: totalSessionsAsync.when(
+                          data: (v) => '$v',
+                          loading: () => '-',
+                          error: (_, __) => '0',
+                        ),
                         label: 'Sessions',
                         iconColor: AppColors.teal,
                       ),
@@ -168,7 +129,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     Expanded(
                       child: SettingsStatCard(
                         iconEmoji: '⏱️',
-                        value: '${(_totalFocusMinutes / 60).toStringAsFixed(1)}h',
+                        value: totalFocusMinutesAsync.when(
+                          data: (v) => '${(v / 60).toStringAsFixed(1)}h',
+                          loading: () => '-',
+                          error: (_, __) => '0h',
+                        ),
                         label: 'Focus Time',
                         iconColor: AppColors.energyDeep,
                       ),
@@ -215,7 +180,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       onChanged: (v) => ref.read(appSettingsProvider.notifier).setDarkMode(v),
                     ),
                     const SizedBox(height: 16),
-                    ThemePreviewCard(isDarkMode: isDarkMode, fontScale: _fontScale),
+                    ThemePreviewCard(isDarkMode: isDarkMode, fontScale: displaySettings.fontScale),
                   ],
                 ),
               ),
@@ -225,20 +190,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   iconColor: AppColors.amber,
                   title: 'Font Size',
                   subtitle: 'Adjust text scale',
-                  value: _fontScale,
+                  value: displaySettings.fontScale,
                   min: 0.8,
                   max: 1.4,
                   divisions: 6,
                   labelBuilder: (v) => '${(v * 100).toInt()}%',
                   onChanged: (v) {
-                    setState(() => _fontScale = v);
-                    final current = ref.read(displaySettingsProvider);
                     ref.read(appSettingsProvider.notifier).updateDisplay(
                       DisplaySettings(
-                        fontFamily: current.fontFamily,
+                        fontFamily: displaySettings.fontFamily,
                         fontScale: v,
-                        reduceMotion: current.reduceMotion,
-                        hapticFeedback: current.hapticFeedback,
+                        reduceMotion: displaySettings.reduceMotion,
+                        hapticFeedback: displaySettings.hapticFeedback,
                       ),
                     );
                   },
@@ -406,11 +369,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: const Center(
-                            child: AppIcon(
-                              AppIcons.checkCircle,
-                              color: AppColors.teal,
-                              size: 24,
-                            ),
+                            child: Text('⚡', style: TextStyle(fontSize: 24)),
                           ),
                         ),
                         const SizedBox(width: 14),
@@ -434,6 +393,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                   fontFamily: 'Inter',
                                   fontSize: 13,
                                   color: AppColors.grey600,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Made for ADHD brains 🧠',
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 12,
+                                  fontStyle: FontStyle.italic,
+                                  color: AppColors.teal,
                                 ),
                               ),
                             ],
@@ -624,8 +593,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         }
       }
 
-      await _loadStats();
-
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -684,7 +651,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       await statsRepo.deleteAll();
 
       await ref.read(appSettingsProvider.notifier).clearAllData();
-      await _loadStats();
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

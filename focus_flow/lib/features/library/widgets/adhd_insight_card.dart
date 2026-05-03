@@ -21,31 +21,30 @@ class AdhdInsightCard extends ConsumerWidget {
           children: insights.map((insight) => _buildInsightTile(insight)).toList(),
         );
       },
-      loading: () => const Center(
-        child: Padding(
-          padding: EdgeInsets.all(24),
-          child: CircularProgressIndicator(),
-        ),
+      loading: () => Container(
+        height: 100,
+        alignment: Alignment.center,
+        child: const CircularProgressIndicator(),
       ),
       error: (_, __) => _buildEmptyState(),
     );
   }
 
   Widget _buildInsightTile(EnergyInsight insight) {
-    IconData icon;
+    String emoji;
     Color color;
 
     if (insight.type == InsightType.peakTime) {
-      icon = Icons.bolt;
+      emoji = '⚡';
       color = AppColors.energyQuick;
     } else if (insight.type == InsightType.energyPattern) {
-      icon = Icons.psychology;
+      emoji = '🧠';
       color = AppColors.energyDeep;
     } else if (insight.type == InsightType.tip) {
-      icon = Icons.lightbulb;
+      emoji = '💡';
       color = AppColors.amber;
     } else {
-      icon = Icons.info;
+      emoji = 'ℹ';
       color = AppColors.teal;
     }
 
@@ -53,23 +52,28 @@ class AdhdInsightCard extends ConsumerWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: color.withOpacity(0.2),
+          color: color.withOpacity(0.15),
         ),
       ),
       child: Row(
         children: [
+          // Icon container - fixed size for alignment
           Container(
-            padding: const EdgeInsets.all(10),
+            width: 44,
+            height: 44,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(10),
+              color: color.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, color: color, size: 24),
+            child: Center(
+              child: Text(emoji, style: TextStyle(fontSize: 22, color: color)),
+            ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 14),
+          // Text content
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -77,16 +81,20 @@ class AdhdInsightCard extends ConsumerWidget {
                 Text(
                   insight.title,
                   style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: color,
+                    fontFamily: 'Montserrat',
                     fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: color,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   insight.body,
                   style: const TextStyle(
+                    fontFamily: 'Inter',
                     fontSize: 13,
+                    fontWeight: FontWeight.w400,
+                    color: AppColors.grey700,
                     height: 1.4,
                   ),
                 ),
@@ -100,33 +108,52 @@ class AdhdInsightCard extends ConsumerWidget {
 
   Widget _buildEmptyState() {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: AppColors.grey100,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
       ),
-      child: Column(
+      child: Row(
         children: [
-          Icon(
-            Icons.insights,
-            size: 48,
-            color: AppColors.grey400,
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'Not enough data yet',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: AppColors.grey600,
+          // Icon container
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: AppColors.amber.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Center(
+              child: Text('📦', style: TextStyle(fontSize: 22)),
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            'Complete more sessions to see personalized insights.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: AppColors.grey500,
-              fontSize: 13,
+          const SizedBox(width: 14),
+          // Text content
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Start tracking',
+                  style: TextStyle(
+                    fontFamily: 'Montserrat',
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.energyQuick,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Complete focus sessions to discover your energy patterns.',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 13,
+                    fontWeight: FontWeight.w400,
+                    color: AppColors.grey600,
+                    height: 1.4,
+                  ),
+                ),
+              ],
             ),
           ),
         ],

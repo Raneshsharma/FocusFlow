@@ -1,356 +1,159 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/widgets/app_icon.dart';
-import '../../../core/utils/date_utils.dart' as utils;
-import '../../../providers/stats_provider.dart';
-import '../widgets/breathing_timer.dart';
-import '../widgets/micro_break_card.dart';
-import '../widgets/wind_down_routine.dart';
-import '../widgets/ambient_sound_mixer.dart';
-import '../widgets/adaptive_rest_card.dart';
-import '../widgets/weekly_summary_card.dart';
 
-class RestScreen extends ConsumerWidget {
+class RestScreen extends StatelessWidget {
   const RestScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final statsAsync = ref.watch(todayStatsProvider);
-    final greeting = utils.DateUtils.getGreeting();
-
+  Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.deepSlate,
       appBar: AppBar(
-        title: const Text('Rest & Recovery'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: const Text(
+          'Rest & Recovery',
+          style: TextStyle(
+            fontFamily: 'Montserrat',
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            color: Colors.white,
+          ),
+        ),
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Greeting
-              Center(
-                child: Text(
-                  greeting,
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Large icon with glow effect - moon for Rest theme
+                Container(
+                  width: 120,
+                  height: 120,
+                  decoration: BoxDecoration(
+                    color: AppColors.amber.withOpacity(0.15),
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.amber.withOpacity(0.2),
+                        blurRadius: 30,
+                        spreadRadius: 5,
+                      ),
+                    ],
+                  ),
+                  child: const Center(
+                    child: Text(
+                      '🌙',
+                      style: TextStyle(fontSize: 56),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Center(
-                child: Text(
-                  "You've earned this break.",
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: AppColors.grey500,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
+                const SizedBox(height: 32),
 
-              // Session summary card
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: AppColors.teal.withOpacity(0.1),
+                // Title
+                const Text(
+                  'Coming Soon',
+                  style: TextStyle(
+                    fontFamily: 'Montserrat',
+                    fontSize: 28,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // Subtitle
+                const Text(
+                  'Rest & Recovery features are under development.',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 16,
+                    color: Colors.white70,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Stay tuned for the next update!',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 16,
+                    color: Colors.white70,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 40),
+
+                // Notify Me button
+                OutlinedButton(
+                  onPressed: () {
+                    HapticFeedback.lightImpact();
+                    debugPrint('Notify Me button pressed - feature coming in v2.0');
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: const Text(
+                          'You\'ll be notified when Rest & Recovery is ready!',
+                          style: TextStyle(fontFamily: 'Inter'),
+                        ),
+                        backgroundColor: AppColors.teal,
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: AppIcon(
-                          AppIcons.checkCircle,
-                          color: AppColors.teal,
-                          size: 32,
-                        ),
                       ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'You showed up today!',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              statsAsync.when(
-                                data: (stats) => stats != null
-                                    ? '${stats.sessionsCompleted} session${stats.sessionsCompleted == 1 ? '' : 's'} completed • ${stats.focusMinutes} min focused'
-                                    : 'Start your journey!',
-                                loading: () => 'Loading...',
-                                error: (_, __) => 'Start your journey!',
-                              ),
-                              style: const TextStyle(color: AppColors.grey600),
-                            ),
-                          ],
+                    );
+                  },
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                    side: const BorderSide(color: AppColors.teal, width: 1.5),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('🔔', style: TextStyle(fontSize: 18)),
+                      SizedBox(width: 8),
+                      Text(
+                        'Notify Me',
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.teal,
                         ),
                       ),
                     ],
                   ),
                 ),
-              ),
-              const SizedBox(height: 16),
+                const SizedBox(height: 24),
 
-              // Adaptive rest card
-              const AdaptiveRestCard(),
-              const SizedBox(height: 32),
-
-              // Take a break section
-              Text(
-                'Take a Break',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Micro breaks
-              SizedBox(
-                height: 120,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  children: [
-                    MicroBreakCard(
-                      icon: 'coffee',
-                      title: 'Coffee Break',
-                      duration: '5 min',
-                      color: AppColors.brown,
-                    ),
-                    SizedBox(width: 12),
-                    MicroBreakCard(
-                      icon: 'walk',
-                      title: 'Take a Walk',
-                      duration: '10 min',
-                      color: AppColors.success,
-                    ),
-                    SizedBox(width: 12),
-                    MicroBreakCard(
-                      icon: 'visibility_off',
-                      title: 'Look Away',
-                      duration: '20 sec',
-                      color: AppColors.energyLow,
-                    ),
-                    SizedBox(width: 12),
-                    MicroBreakCard(
-                      icon: 'accessibility',
-                      title: 'Stretch',
-                      duration: '5 min',
-                      color: AppColors.purple,
-                    ),
-                    SizedBox(width: 12),
-                    MicroBreakCard(
-                      icon: 'water_drop',
-                      title: 'Hydrate',
-                      duration: '2 min',
-                      color: AppColors.zoneMorning,
-                    ),
-                    SizedBox(width: 12),
-                    MicroBreakCard(
-                      icon: 'spa',
-                      title: 'Relax',
-                      duration: '5 min',
-                      color: AppColors.categoryPink,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 32),
-
-              // Breathing exercises
-              Text(
-                'Calm Your Mind',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Breathing timer card
-              InkWell(
-                onTap: () => _showBreathingTimer(context),
-                child: Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: AppColors.energyLow.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: AppIcon(
-                            AppIcons.air,
-                            color: AppColors.energyLow,
-                            size: 32,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Breathing Exercise',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Box breathing, 4-7-8, or physiological sigh',
-                                style: const TextStyle(color: AppColors.grey600),
-                              ),
-                            ],
-                          ),
-                        ),
-                        AppIcon(AppIcons.chevronRight),
-                      ],
+                // Version hint
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.06),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Text(
+                    'Expected in v2.0',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 12,
+                      color: Colors.white38,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 12),
-
-              // Wind down card
-              InkWell(
-                onTap: () => _showWindDownRoutine(context),
-                child: Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: AppColors.purple.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: AppIcon(
-                            AppIcons.nightlight,
-                            color: AppColors.purple,
-                            size: 32,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Wind Down Routine',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Prepare for better sleep',
-                                style: const TextStyle(color: AppColors.grey600),
-                              ),
-                            ],
-                          ),
-                        ),
-                        AppIcon(AppIcons.chevronRight),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              // Ambient Sound Mixer card
-              InkWell(
-                onTap: () => _showAmbientSoundMixer(context),
-                child: Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: AppColors.energyDeep.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: AppIcon(
-                            AppIcons.volumeUp,
-                            color: AppColors.energyDeep,
-                            size: 32,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Ambient Sounds',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Rain, fireplace, ocean waves & more',
-                                style: const TextStyle(color: AppColors.grey600),
-                              ),
-                            ],
-                          ),
-                        ),
-                        AppIcon(AppIcons.chevronRight),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // Weekly summary card
-              const WeeklySummaryCard(),
-              const SizedBox(height: 24),
-            ],
+              ],
+            ),
           ),
         ),
       ),
-    );
-  }
-
-  void _showBreathingTimer(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => const BreathingTimerSheet(),
-    );
-  }
-
-  void _showWindDownRoutine(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => const WindDownRoutineSheet(),
-    );
-  }
-
-  void _showAmbientSoundMixer(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => const AmbientSoundMixer(),
     );
   }
 }

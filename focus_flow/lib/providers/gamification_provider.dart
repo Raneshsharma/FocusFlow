@@ -51,7 +51,11 @@ class GamificationState {
     );
   }
 
-  double get levelProgress => (totalXp % AppConstants.xpPerLevel) / AppConstants.xpPerLevel;
+  double get levelProgress {
+    final perLevel = AppConstants.xpPerLevel;
+    if (perLevel <= 0) return 0.0;
+    return (totalXp % perLevel) / perLevel;
+  }
 
   bool get canLevelUp => totalXp >= level * AppConstants.xpPerLevel;
 }

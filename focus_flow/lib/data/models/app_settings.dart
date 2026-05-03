@@ -1,12 +1,12 @@
 class PomodoroTimerSettings {
-  int workMinutes;
-  int shortBreakMinutes;
-  int longBreakMinutes;
-  int roundsBeforeLongBreak;
-  bool autoStartBreaks;
-  bool autoStartWork;
+  final int workMinutes;
+  final int shortBreakMinutes;
+  final int longBreakMinutes;
+  final int roundsBeforeLongBreak;
+  final bool autoStartBreaks;
+  final bool autoStartWork;
 
-  PomodoroTimerSettings({
+  const PomodoroTimerSettings({
     this.workMinutes = 25,
     this.shortBreakMinutes = 5,
     this.longBreakMinutes = 15,

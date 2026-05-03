@@ -8,6 +8,7 @@ class AchievementBadge extends StatelessWidget {
   final bool isUnlocked;
   final DateTime? unlockedAt;
   final bool showDetails;
+  final double size;
 
   const AchievementBadge({
     super.key,
@@ -15,6 +16,7 @@ class AchievementBadge extends StatelessWidget {
     this.isUnlocked = false,
     this.unlockedAt,
     this.showDetails = true,
+    this.size = 56,
   });
 
   @override
@@ -60,10 +62,9 @@ class AchievementBadge extends StatelessWidget {
                         definition.icon,
                         style: const TextStyle(fontSize: 28),
                       )
-                    : Icon(
-                        Icons.lock_outline,
-                        color: AppColors.grey400,
-                        size: 24,
+                    : Text(
+                        '🔒',
+                        style: TextStyle(fontSize: 24, color: AppColors.grey400),
                       ),
               ),
             ),
@@ -121,7 +122,7 @@ class AchievementBadge extends StatelessWidget {
               child: Center(
                 child: isUnlocked
                     ? Text(definition.icon, style: const TextStyle(fontSize: 40))
-                    : const Icon(Icons.lock_outline, color: AppColors.grey400, size: 32),
+                    : Text('🔒', style: TextStyle(fontSize: 32, color: AppColors.grey400)),
               ),
             ),
             const SizedBox(height: 16),

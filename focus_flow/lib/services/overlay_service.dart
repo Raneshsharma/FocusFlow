@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 
-/// Global overlay entry manager for showing toasts and overlays.
-/// Initialized in StatefulWidget.initState() - no Riverpod provider needed.
+/// Overlay entry manager for showing toasts and overlays.
+/// Initialized in StatefulWidget.initState() and exposed via Riverpod.
+///
+/// Can be accessed via:
+/// - Singleton: `overlayService` (for initialization before Riverpod)
+/// - Provider: `ref.read(overlayServiceProvider)` (for DI in providers)
 class OverlayService {
-  static OverlayService? _instance;
-  static OverlayService get instance => _instance ??= OverlayService._();
+  static final OverlayService _instance = OverlayService._();
+  static OverlayService get instance => _instance;
 
   OverlayService._();
 
@@ -53,5 +57,6 @@ class OverlayService {
   }
 }
 
-/// Global overlay service singleton.
+/// Singleton instance for initialization before Riverpod providers are ready.
+/// After initialization, prefer using `overlayServiceProvider`.
 final overlayService = OverlayService.instance;

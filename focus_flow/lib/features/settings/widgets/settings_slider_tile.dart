@@ -34,6 +34,7 @@ class SettingsSliderTile extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Container(
               width: 40,
@@ -50,6 +51,7 @@ class SettingsSliderTile extends StatelessWidget {
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     title,
@@ -92,21 +94,23 @@ class SettingsSliderTile extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 8),
-        SliderTheme(
-          data: SliderThemeData(
-            activeTrackColor: AppColors.teal,
-            inactiveTrackColor: AppColors.grey200,
-            thumbColor: AppColors.teal,
-            overlayColor: AppColors.teal.withOpacity(0.2),
-            trackHeight: 4,
-          ),
-          child: Slider(
-            value: value,
-            min: min,
-            max: max,
-            divisions: divisions,
-            onChanged: onChanged,
+        Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: SliderTheme(
+            data: SliderThemeData(
+              activeTrackColor: AppColors.teal,
+              inactiveTrackColor: AppColors.grey200,
+              thumbColor: AppColors.teal,
+              overlayColor: AppColors.teal.withOpacity(0.2),
+              trackHeight: 4,
+            ),
+            child: Slider(
+              value: value,
+              min: min,
+              max: max,
+              divisions: divisions,
+              onChanged: onChanged,
+            ),
           ),
         ),
       ],

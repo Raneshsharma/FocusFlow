@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:fl_chart/fl_chart.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/widgets/app_icon.dart';
-import '../../../core/utils/date_utils.dart' as utils;
 import '../../../providers/providers.dart';
 import '../../../providers/energy_insight_provider.dart';
 import '../widgets/streak_hero_card.dart';
@@ -16,24 +13,30 @@ class WeeklyInsightsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final statsAsync = ref.watch(statsRepositoryProvider);
-
     return Scaffold(
       backgroundColor: AppColors.surface,
       appBar: AppBar(
-        title: const Text('Weekly Insights'),
+        leading: IconButton(
+          icon: const Text('←', style: TextStyle(fontSize: 28, color: AppColors.navy, fontWeight: FontWeight.bold)),
+          onPressed: () => context.go('/library'),
+        ),
+        title: const Text(
+          'Weekly Insights',
+          style: TextStyle(
+            fontFamily: 'Montserrat',
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            color: AppColors.navy,
+          ),
+        ),
+        centerTitle: false,
         backgroundColor: Colors.transparent,
         elevation: 0,
-        actions: [
-          IconButton(
-            icon: AppIcon(AppIcons.share, size: 20),
-            onPressed: () => _shareInsights(context, ref),
-          ),
-        ],
       ),
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(statsRepositoryProvider);
+          ref.invalidate(todayStatsProvider);
           ref.invalidate(energyInsightProvider);
         },
         child: SingleChildScrollView(
@@ -44,16 +47,18 @@ class WeeklyInsightsScreen extends ConsumerWidget {
             children: [
               // Streak hero card
               StreakHeroCard(
-                onShare: () => _shareInsights(context, ref),
+                onShare: () => _shareInsights(context),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
 
               // Weekly bar chart
               const Text(
                 'This Week',
                 style: TextStyle(
+                  fontFamily: 'Montserrat',
                   fontSize: 18,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.navy,
                 ),
               ),
               const SizedBox(height: 12),
@@ -68,8 +73,10 @@ class WeeklyInsightsScreen extends ConsumerWidget {
               const Text(
                 'ADHD Insights',
                 style: TextStyle(
+                  fontFamily: 'Montserrat',
                   fontSize: 18,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.navy,
                 ),
               ),
               const SizedBox(height: 12),
@@ -77,7 +84,7 @@ class WeeklyInsightsScreen extends ConsumerWidget {
               const SizedBox(height: 24),
 
               // Pro tip card
-              _ProTipCard(),
+              const _ProTipCard(),
               const SizedBox(height: 32),
             ],
           ),
@@ -95,34 +102,24 @@ class WeeklyInsightsScreen extends ConsumerWidget {
     );
   }
 
-  void _shareInsights(BuildContext context, WidgetRef ref) async {
-    final buffer = StringBuffer();
-    buffer.writeln('FocusFlow Weekly Insights');
-    buffer.writeln('======================');
-    buffer.writeln('');
-
-    // Add streak info
-    buffer.writeln('🔥 Streak: Check the app for your current streak!');
-    buffer.writeln('');
-
-    // Copy to clipboard
-    await Clipboard.setData(ClipboardData(text: buffer.toString()));
-
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Insights copied to clipboard!'),
-          backgroundColor: AppColors.success,
-        ),
-      );
-    }
+  void _shareInsights(BuildContext context) async {
+    // Navigate to library and show share options there
+    context.go('/library');
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Go to Archive tab to share your streak!'),
+        backgroundColor: AppColors.teal,
+      ),
+    );
   }
 }
 
 class _ProTipCard extends StatelessWidget {
+  const _ProTipCard();
+
   static const _proTips = [
     'Break big tasks into 5-minute chunks to match ADHD attention spans.',
-    'Use the "Two-Minine Rule" — if it takes less than 2 minutes, do it now.',
+    'Use the "Two-Minite Rule" — if it takes less than 2 minutes, do it now.',
     'Time blind? Use a timer to create artificial urgency.',
     'Body doubling: work near someone, even virtually.',
     'The "Just Start" rule: commit to only 5 minutes of a task.',
@@ -143,45 +140,59 @@ class _ProTipCard extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            AppColors.purple.withOpacity(0.1),
-            AppColors.teal.withOpacity(0.1),
+            AppColors.purple.withOpacity(0.08),
+            AppColors.teal.withOpacity(0.08),
           ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: AppColors.purple.withOpacity(0.2),
+          color: AppColors.purple.withOpacity(0.15),
         ),
       ),
-      child: Column(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppColors.purple.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Text('💡', style: TextStyle(fontSize: 20)),
-              ),
-              const SizedBox(width: 12),
-              const Text(
-                'Pro Tip',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.purple,
-                ),
-              ),
-            ],
+          // Lightbulb icon - perfectly centered
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: AppColors.purple.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Center(
+              child: Text('💡', style: TextStyle(fontSize: 20)),
+            ),
           ),
-          const SizedBox(height: 12),
-          Text(
-            tip,
-            style: const TextStyle(
-              fontSize: 14,
-              height: 1.5,
+          const SizedBox(width: 14),
+          // Text content
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Pro Tip',
+                  style: TextStyle(
+                    fontFamily: 'Montserrat',
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.purple,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  tip,
+                  style: const TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 14,
+                    fontWeight: FontWeight.w400,
+                    color: AppColors.grey700,
+                    height: 1.4,
+                  ),
+                ),
+              ],
             ),
           ),
         ],

@@ -1,3 +1,6 @@
+import 'enums.dart';
+import 'flow_session.dart';
+
 enum InsightType {
   peakTime,
   energyPattern,
@@ -15,7 +18,7 @@ class EnergyInsight {
     required this.type,
   });
 
-  static List<EnergyInsight> generate(List<dynamic> sessions) {
+  static List<EnergyInsight> generate(List<FlowSession> sessions) {
     final insights = <EnergyInsight>[];
 
     if (sessions.isEmpty) {
@@ -28,7 +31,7 @@ class EnergyInsight {
     }
 
     // Analyze: what time of day gets the longest sessions?
-    final byHour = <int, List<dynamic>>{};
+    final byHour = <int, List<FlowSession>>{};
     for (final session in sessions) {
       if (session.startedAt != null) {
         final hour = session.startedAt!.hour;
@@ -52,7 +55,8 @@ class EnergyInsight {
     // Energy pattern insights
     final energyCounts = <String, int>{};
     for (final session in sessions) {
-      final energyName = session.energyLevel?.name ?? 'none';
+      final energyLevel = session.energyLevel;
+      final energyName = energyLevel != EnergyLevel.none ? energyLevel.name : 'none';
       energyCounts[energyName] = (energyCounts[energyName] ?? 0) + 1;
     }
 

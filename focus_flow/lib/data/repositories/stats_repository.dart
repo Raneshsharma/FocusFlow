@@ -1,12 +1,11 @@
 import 'dart:convert';
 import 'package:hive/hive.dart';
-import 'package:intl/intl.dart';
 import '../models/daily_stats.dart';
+import '../../core/utils/date_helpers.dart';
 
 class StatsRepository {
   static const String boxName = 'stats';
   final Box<String> _box;
-  final DateFormat _dateFormat = DateFormat('yyyy-MM-dd');
 
   StatsRepository(this._box);
 
@@ -16,11 +15,11 @@ class StatsRepository {
   }
 
   DailyStats getByDate(DateTime date) {
-    final dateStr = _dateFormat.format(date);
-    final json = _box.get(dateStr);
+    final dateKey = formatDateKey(date);
+    final json = _box.get(dateKey);
     if (json == null) {
-      final stats = DailyStats.create(date: dateStr);
-      _box.put(dateStr, jsonEncode(stats.toJson()));
+      final stats = DailyStats.create(date: dateKey);
+      _box.put(dateKey, jsonEncode(stats.toJson()));
       return stats;
     }
     return DailyStats.fromJson(jsonDecode(json));
@@ -60,7 +59,7 @@ class StatsRepository {
   List<DateTime> getActiveDates() {
     return getAll()
         .where((s) => s.tasksCompleted > 0 || s.sessionsCompleted > 0)
-        .map((s) => _dateFormat.parse(s.date))
+        .map((s) => parseDateKey(s.date) ?? DateTime.now())
         .toList();
   }
 
@@ -96,13 +95,12 @@ class StatsRepository {
     // Sort dates descending (most recent first)
     dates.sort((a, b) => b.compareTo(a));
 
-    final today = DateTime.now();
-    final todayDate = DateTime(today.year, today.month, today.day);
-    final yesterday = todayDate.subtract(const Duration(days: 1));
+    final today = getTodayStart();
+    final yesterday = today.subtract(const Duration(days: 1));
 
     // Check if streak is active (today or yesterday had activity)
     final mostRecent = dates.first;
-    final mostRecentDate = DateTime(mostRecent.year, mostRecent.month, mostRecent.day);
+    final mostRecentDate = getDateStart(mostRecent);
 
     if (mostRecentDate.isBefore(yesterday)) {
       return 0; // Streak broken
@@ -111,8 +109,8 @@ class StatsRepository {
     // Count consecutive days
     int streak = 1;
     for (int i = 0; i < dates.length - 1; i++) {
-      final current = DateTime(dates[i].year, dates[i].month, dates[i].day);
-      final next = DateTime(dates[i + 1].year, dates[i + 1].month, dates[i + 1].day);
+      final current = getDateStart(dates[i]);
+      final next = getDateStart(dates[i + 1]);
 
       final diff = current.difference(next).inDays;
       if (diff == 1) {

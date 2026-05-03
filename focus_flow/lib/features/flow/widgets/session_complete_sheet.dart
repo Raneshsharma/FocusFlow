@@ -54,17 +54,16 @@ class _SessionCompleteSheetState extends ConsumerState<SessionCompleteSheet> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Success icon
+          // Success emoji
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: AppColors.success.withOpacity(0.1),
               shape: BoxShape.circle,
             ),
-            child: AppIcon(
-              AppIcons.checkCircle,
-              color: AppColors.success,
-              size: 48,
+            child: Text(
+              _getSessionEmoji(),
+              style: const TextStyle(fontSize: 48),
             ),
           ),
           const SizedBox(height: 16),
@@ -82,11 +81,22 @@ class _SessionCompleteSheetState extends ConsumerState<SessionCompleteSheet> {
             const SizedBox(height: 8),
           ],
 
-          Text(
-            'Session Complete!',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+          // Session Complete header
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                _getSessionEmoji(),
+                style: const TextStyle(fontSize: 28),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Session Complete!',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 8),
 
@@ -160,6 +170,21 @@ class _SessionCompleteSheetState extends ConsumerState<SessionCompleteSheet> {
         return 'pomodoro sessions';
       case SessionType.deep:
         return 'deep work';
+      case SessionType.custom:
+        return 'custom timer';
+    }
+  }
+
+  String _getSessionEmoji() {
+    switch (widget.sessionType) {
+      case SessionType.open:
+        return '⚡';
+      case SessionType.pomodoro:
+        return '🍅';
+      case SessionType.deep:
+        return '🧠';
+      case SessionType.custom:
+        return '⏱️';
     }
   }
 

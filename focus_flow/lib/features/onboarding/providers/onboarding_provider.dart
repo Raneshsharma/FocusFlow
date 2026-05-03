@@ -5,36 +5,49 @@ import '../../../providers/providers.dart';
 class OnboardingState {
   final int currentPage;
   final bool hasCompletedOnboarding;
+  final bool isLoading;
 
   const OnboardingState({
     this.currentPage = 0,
     this.hasCompletedOnboarding = false,
+    this.isLoading = true, // Start with loading = true
   });
 
   OnboardingState copyWith({
     int? currentPage,
     bool? hasCompletedOnboarding,
+    bool? isLoading,
   }) {
     return OnboardingState(
       currentPage: currentPage ?? this.currentPage,
       hasCompletedOnboarding: hasCompletedOnboarding ?? this.hasCompletedOnboarding,
+      isLoading: isLoading ?? this.isLoading,
     );
   }
 }
 
 class OnboardingNotifier extends StateNotifier<OnboardingState> {
   final Ref _ref;
+  bool _initialized = false;
 
-  OnboardingNotifier(this._ref) : super(const OnboardingState()) {
-    _loadState();
-  }
+  OnboardingNotifier(this._ref) : super(const OnboardingState());
 
-  Future<void> _loadState() async {
-    final settingsRepo = await _ref.read(settingsRepositoryProvider.future);
-    final settings = settingsRepo.getSettings();
-    if (settings != null) {
+  Future<void> ensureInitialized() async {
+    if (_initialized) return;
+    _initialized = true;
+
+    try {
+      final settingsRepo = await _ref.read(settingsRepositoryProvider.future);
+      final settings = settingsRepo.getSettings();
       state = state.copyWith(
-        hasCompletedOnboarding: settings.hasCompletedOnboarding,
+        hasCompletedOnboarding: settings?.hasCompletedOnboarding ?? false,
+        isLoading: false,
+      );
+    } catch (e) {
+      // If settings can't be loaded, assume not completed (safer default)
+      state = state.copyWith(
+        hasCompletedOnboarding: false,
+        isLoading: false,
       );
     }
   }
