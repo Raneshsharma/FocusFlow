@@ -27,10 +27,18 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        create("release") {
+            storeFile = file("key.jks")
+            storePassword = "FocusFlow123"
+            keyAlias = "upload"
+            keyPassword = "FocusFlow123"
+        }
+    }
+
     buildTypes {
         release {
-            // Note: Google Play Console will re-sign your app automatically
-            // if you have App Signing enabled (recommended)
+            signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
