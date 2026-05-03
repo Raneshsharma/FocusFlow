@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "com.focusflow.app"
+    namespace = "com.arcstudio.focusflow"
     compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
@@ -20,7 +20,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.focusflow.app"
+        applicationId = "com.arcstudio.focusflow"
         minSdk = flutter.minSdkVersion
         targetSdk = 36
         versionCode = flutter.versionCode
